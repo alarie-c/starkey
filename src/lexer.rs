@@ -28,6 +28,7 @@ impl<'a> Lexer<'a> {
             // Attempt to match a token
             match self.stream[self.pos..] {
                 [b'=', ..] => self.add_token(TokenKind::Equal, self.pos, 1),
+                [b':', ..] => self.add_token(TokenKind::Colon, self.pos, 1),
                 [b'-', b'>', ..] => self.add_token(TokenKind::RArrow, self.pos, 2),
 
                 [b'"', ..] => {

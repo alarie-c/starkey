@@ -26,6 +26,7 @@ pub enum TokenKind {
     // Operators
     Equal,
     RArrow,
+    Colon,
 
     // Literals
     Ident(String),
@@ -46,7 +47,7 @@ impl TokenKind {
             &TokenKind::Ident(_) => false,
             &TokenKind::Str(_) => false,
             &TokenKind::Number(_) => false,
-            _ => true
+            _ => true,
         }
     }
 }

@@ -1,8 +1,8 @@
 use std::{env, fs};
 
 mod lexer;
-mod parser;
 mod node;
+mod parser;
 mod token;
 
 fn main() {
@@ -17,6 +17,11 @@ fn main() {
         // Create lexer and tokenize
         let mut lexer = lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
+
+        // Create parser and parse
+        let mut parser = parser::Parser::new(tokens);
+        let ast = parser.parse_stream();
+        dbg!(ast);
 
         dbg!(&tokens);
     } else if args.len() < 2 && dbga {
