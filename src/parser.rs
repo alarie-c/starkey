@@ -57,7 +57,8 @@ impl<'a> Parser<'a> {
             [TokenKind::Str(v), ..] => self.parse_str(v),
             [TokenKind::Ident(n), ..] => self.parse_ident(n),
 
-            [TokenKind::Let, ..] => self.parse_variable_assignment(),
+            [TokenKind::Let, ..] => self.parse_variable_assignment(false),
+            [TokenKind::Const, ..] => self.parse_variable_assignment(true),
 
             _ => None,
         }
@@ -67,7 +68,7 @@ impl<'a> Parser<'a> {
     ///
     /// Parent Format (without annotation): `let <ident> = <value>`
     /// Will return a node containing other nodes for the variable assignment
-    fn parse_variable_assignment(&mut self) -> Option<Node> {
+    fn parse_variable_assignment(&mut self, constant: bool) -> Option<Node> {
         // Get the name of the identifier
         let ident = self
             .advance()
@@ -114,7 +115,7 @@ impl<'a> Parser<'a> {
             // Return the node
             Some(Node::VariableAssignment(VariableAssignment {
                 ident: Box::new(ident),
-                constant: false,
+                constant,
                 value: Box::new(value),
                 typ: Some(Box::new(typ)),
             }))
@@ -134,7 +135,7 @@ impl<'a> Parser<'a> {
             // Return the node
             Some(Node::VariableAssignment(VariableAssignment {
                 ident: Box::new(ident),
-                constant: false,
+                constant,
                 value: Box::new(value),
                 typ: None,
             }))
