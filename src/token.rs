@@ -21,7 +21,7 @@ pub struct TokenSpan(usize, usize);
 /// Variants for every kind of token recognized by the program
 /// Anything non-enumerated (e.g. string literals, numbers, and symbols) is stored
 /// In its variant's field (Str, Number, Ident) respectively
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     // Operators
     Equal,
@@ -38,4 +38,15 @@ pub enum TokenKind {
 
     // Other
     EOF,
+}
+
+impl TokenKind {
+    pub fn is_branch_node(&self) -> bool {
+        match self {
+            &TokenKind::Ident(_) => false,
+            &TokenKind::Str(_) => false,
+            &TokenKind::Number(_) => false,
+            _ => true
+        }
+    }
 }

@@ -1,6 +1,8 @@
 use std::{env, fs};
 
 mod lexer;
+mod parser;
+mod node;
 mod token;
 
 fn main() {
