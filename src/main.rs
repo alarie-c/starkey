@@ -5,6 +5,7 @@ mod lexer;
 mod node;
 mod parser;
 mod token;
+mod analysis;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,11 +26,15 @@ fn main() {
         dbg!(&ast);
 
         // Create evaluator
-        let mut evaluator = eval::Evaluator::new();
-        evaluator.eval(ast);
-        dbg!(&evaluator);
+        // let mut evaluator = eval::Evaluator::new();
+        // evaluator.eval(ast);
+        // dbg!(&evaluator);
 
-        dbg!(&tokens);
+        // Generate HIR
+        let hir_ops = analysis::hir::generate(ast);
+        println!("{:#?}", &hir_ops);
+
+        // dbg!(&tokens);
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");
         std::process::exit(1);

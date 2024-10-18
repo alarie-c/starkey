@@ -28,6 +28,13 @@ impl<'a> Lexer<'a> {
             // Attempt to match a token
             match self.stream[self.pos..] {
                 [b'=', ..] => self.add_token(TokenKind::Equal, self.pos, 1),
+                [b'-', ..] => self.add_token(TokenKind::Minus, self.pos, 1),
+                [b'+', ..] => self.add_token(TokenKind::Plus, self.pos, 1),
+                [b'/', ..] => self.add_token(TokenKind::Slash, self.pos, 1),
+                [b'*', ..] => self.add_token(TokenKind::Star, self.pos, 1),
+                [b'%', ..] => self.add_token(TokenKind::Modulo, self.pos, 1),
+                [b'^', ..] => self.add_token(TokenKind::Exponent, self.pos, 1),
+
                 [b':', ..] => self.add_token(TokenKind::Colon, self.pos, 1),
                 [b'-', b'>', ..] => self.add_token(TokenKind::RArrow, self.pos, 2),
 

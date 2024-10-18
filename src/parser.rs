@@ -60,7 +60,7 @@ impl<'a> Parser<'a> {
             [TokenKind::Let, ..] => self.parse_variable_assignment(false),
             [TokenKind::Const, ..] => self.parse_variable_assignment(true),
 
-            _ => None,
+            _ => Some(Node::Exit(0)),
         }
     }
 

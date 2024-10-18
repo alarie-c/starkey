@@ -2,6 +2,6 @@
 An educational, interpretted programming language written in Rust.
 
 ## Implementation Checklist
-* [ ] Variable declaration
+* [x] Variable declaration
 * [ ] Variable mutation
 * [ ] Arithmetic

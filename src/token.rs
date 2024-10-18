@@ -27,6 +27,12 @@ pub enum TokenKind {
     Equal,
     RArrow,
     Colon,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Modulo,
+    Exponent,
 
     // Literals
     Ident(String),
