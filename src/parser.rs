@@ -1,5 +1,5 @@
 use crate::{
-    node::{Node, VariableAssignment},
+    node::{BinaryExpression, Node, VariableAssignment},
     token::{Token, TokenKind},
 };
 
@@ -53,15 +53,101 @@ impl<'a> Parser<'a> {
     /// with unexpected tokens as happen
     fn parse_expr(&mut self) -> Option<Node> {
         match self.variants.as_slice()[self.pos..] {
+            [TokenKind::Plus, ..]
+            | [TokenKind::Minus, ..]
+            | [TokenKind::Star, ..]
+            | [TokenKind::Slash, ..]
+            | [TokenKind::Modulo, ..]
+            | [TokenKind::Exponent, ..]
+            => self.parse_binary_expression(None),
+
             [TokenKind::Number(v), ..] => self.parse_number(v),
             [TokenKind::Str(v), ..] => self.parse_str(v),
             [TokenKind::Ident(n), ..] => self.parse_ident(n),
+
 
             [TokenKind::Let, ..] => self.parse_variable_assignment(false),
             [TokenKind::Const, ..] => self.parse_variable_assignment(true),
 
             _ => Some(Node::Exit(0)),
         }
+    }
+
+    fn parse_binary_expression(&mut self, optional_lhs: Option<Node>) -> Option<Node> {
+        let op = match self.variants[self.pos] {
+            &TokenKind::Plus => '+' as u8,
+            &TokenKind::Minus => '-' as u8,
+            &TokenKind::Star => '*' as u8,
+            &TokenKind::Slash => '/' as u8,
+            &TokenKind::Modulo => '%' as u8,
+            &TokenKind::Exponent => '^' as u8,
+            _ => todo!("recover invalid binop token"),
+        };
+        
+        // Get the left node
+        let lhs = self
+            .back()
+            .then(|| {
+                self.parse_expr().unwrap_or_else(|| {
+                    todo!("recover invalid lhs");
+                })
+            })
+            .unwrap_or_else(|| {
+                todo!("recover missing lhs");
+            });
+
+        self.pos += 1;
+
+        // Get the right node
+        let rhs = self
+            .advance()
+            .then(|| {
+                self.parse_expr().unwrap_or_else(|| {
+                    todo!("recover invalid rhs");
+                })
+            })
+            .unwrap_or_else(|| {
+                todo!("recover missing rhs");
+            });
+
+        // Look for possible nested expressions
+        let nested_expr: Option<&TokenKind> = self
+            .advance()
+            .then(|| {
+                self.variants[self.pos]
+            });
+
+        match nested_expr {
+            Some(k) => {
+                match k {
+                    &TokenKind::Plus
+                    | &TokenKind::Minus
+                    | &TokenKind::Star
+                    | &TokenKind::Slash
+                    | &TokenKind::Modulo
+                    | &TokenKind::Exponent
+                => {
+                    // Get new expr and set it's LHS to current the RHS
+                    let expr = self.parse_binary_expression(Some(rhs)).unwrap_or_else(|| {
+                        todo!("recover invalid nested binary expr");
+                    });
+                    return Some(Node::BinaryExpression(BinaryExpression {
+                        lhs: if optional_lhs.is_some() { Box::new(optional_lhs.unwrap()) } else { Box::new(lhs) },
+                        rhs: Box::new(expr),
+                        op,
+                    }));
+                },
+                _ => {}
+                }
+            },
+            _ => {},
+        }
+
+        return Some(Node::BinaryExpression(BinaryExpression {
+            lhs: if optional_lhs.is_some() { Box::new(optional_lhs.unwrap()) } else { Box::new(lhs) },
+            rhs: Box::new(rhs),
+            op,
+        }));
     }
 
     /// Parent Format (with annotation): `let <ident> : <ident> = <value>`
@@ -146,7 +232,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_number(&mut self, value: &String) -> Option<Node> {
+    fn parse_number(&mut self, value: &String) -> Option<Node> {        
         if value.contains(".") {
             // Floating point number literal
             let parsed: f32 = value.parse().unwrap_or_else(|_| {
@@ -197,6 +283,18 @@ impl<'a> Parser<'a> {
             false
         } else {
             self.pos += 1;
+            true
+        }
+    }
+
+    // Advances the parser's position and returns true or false
+    // True -> success
+    // False -> EOF condition reached
+    fn back(&mut self) -> bool {
+        if self.pos == 0 {
+            false
+        } else {
+            self.pos -= 1;
             true
         }
     }
