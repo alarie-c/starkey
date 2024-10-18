@@ -1,5 +1,6 @@
 use std::{env, fs};
 
+mod eval;
 mod lexer;
 mod node;
 mod parser;
@@ -21,7 +22,12 @@ fn main() {
         // Create parser and parse
         let mut parser = parser::Parser::new(tokens);
         let ast = parser.parse_stream();
-        dbg!(ast);
+        dbg!(&ast);
+
+        // Create evaluator
+        let mut evaluator = eval::Evaluator::new();
+        evaluator.eval(ast);
+        dbg!(&evaluator);
 
         dbg!(&tokens);
     } else if args.len() < 2 && dbga {
