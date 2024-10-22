@@ -5,7 +5,6 @@ mod lexer;
 mod node;
 mod parser;
 mod token;
-mod analysis;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,10 +28,6 @@ fn main() {
         // let mut evaluator = eval::Evaluator::new();
         // evaluator.eval(ast);
         // dbg!(&evaluator);
-
-        // Generate HIR
-        let hir_ops = analysis::hir::generate(ast);
-        println!("{:#?}", &hir_ops);
 
         // dbg!(&tokens);
     } else if args.len() < 2 && dbga {

@@ -1,5 +1,5 @@
 use crate::{
-    node::{BinaryExpression, Node, VariableAssignment},
+    node::{BinaryExpression, Node},
     token::{Token, TokenKind},
 };
 
@@ -199,12 +199,12 @@ impl<'a> Parser<'a> {
                 .unwrap();
 
             // Return the node
-            Some(Node::VariableAssignment(VariableAssignment {
+            Some(Node::VariableAssignment {
                 ident: Box::new(ident),
                 constant,
                 value: Box::new(value),
                 typ: Some(Box::new(typ)),
-            }))
+            })
 
         // Type annotation absent
         } else if *next == &TokenKind::Equal {
@@ -219,12 +219,12 @@ impl<'a> Parser<'a> {
                 .unwrap();
 
             // Return the node
-            Some(Node::VariableAssignment(VariableAssignment {
+            Some(Node::VariableAssignment {
                 ident: Box::new(ident),
                 constant,
                 value: Box::new(value),
                 typ: None,
-            }))
+            })
 
         // Got something other than = or :
         } else {

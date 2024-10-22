@@ -27,6 +27,12 @@ impl<'a> Lexer<'a> {
 
             // Attempt to match a token
             match self.stream[self.pos..] {
+                [b'-', b'>', ..] => self.add_token(TokenKind::Arrow, self.pos, 2),
+                [b':', b':', ..] => self.add_token(TokenKind::ColonColon, self.pos, 2),
+                [b'=', b'=', ..] => self.add_token(TokenKind::EqualEqual, self.pos, 2),
+                [b'!', b'=', ..] => self.add_token(TokenKind::BangEqual, self.pos, 2),
+                [b'<', b'=', ..] => self.add_token(TokenKind::LessEqual, self.pos, 2),
+                [b'>', b'=', ..] => self.add_token(TokenKind::MoreEqual, self.pos, 2),
                 [b'=', ..] => self.add_token(TokenKind::Equal, self.pos, 1),
                 [b'-', ..] => self.add_token(TokenKind::Minus, self.pos, 1),
                 [b'+', ..] => self.add_token(TokenKind::Plus, self.pos, 1),
@@ -34,10 +40,10 @@ impl<'a> Lexer<'a> {
                 [b'*', ..] => self.add_token(TokenKind::Star, self.pos, 1),
                 [b'%', ..] => self.add_token(TokenKind::Modulo, self.pos, 1),
                 [b'^', ..] => self.add_token(TokenKind::Exponent, self.pos, 1),
-
                 [b':', ..] => self.add_token(TokenKind::Colon, self.pos, 1),
-                [b'-', b'>', ..] => self.add_token(TokenKind::RArrow, self.pos, 2),
-
+                [b'<', ..] => self.add_token(TokenKind::Less, self.pos, 1),
+                [b'>', ..] => self.add_token(TokenKind::More, self.pos, 1),
+                [b'!', ..] => self.add_token(TokenKind::Bang, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();
@@ -48,8 +54,7 @@ impl<'a> Lexer<'a> {
                         }
                         None => todo!("Non-terminating literal"),
                     }
-                }
-
+                },
                 _ => {
                     // Tokenize number literals
                     if self.stream[self.pos].is_ascii_digit() {
@@ -67,13 +72,17 @@ impl<'a> Lexer<'a> {
                         match ident.as_str() {
                             "let" => self.add_token(TokenKind::Let, begin, 3),
                             "const" => self.add_token(TokenKind::Const, begin, 5),
+                            "if" => self.add_token(TokenKind::If, begin, 2),
+                            "else" => self.add_token(TokenKind::Else, begin, 4),
+                            "elif" => self.add_token(TokenKind::Elif, begin, 4),
+                            "end" => self.add_token(TokenKind::End, begin, 3),
                             _ => {
                                 let len = ident.len();
                                 self.add_token(TokenKind::Ident(ident), begin, len);
-                            }
+                            },
                         }
                     }
-                }
+                },
             }
 
             // Advance position

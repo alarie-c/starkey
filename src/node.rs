@@ -1,6 +1,12 @@
 #[derive(Debug)]
 pub enum Node {
-    VariableAssignment(VariableAssignment),
+    VariableAssignment {
+        ident: Box<Node>,
+        constant: bool,
+        value: Box<Node>,
+        typ: Option<Box<Node>>,
+    },
+
     BinaryExpression(BinaryExpression),
 
     // Values
@@ -11,14 +17,6 @@ pub enum Node {
 
     // Other
     Exit(i32),
-}
-
-#[derive(Debug)]
-pub struct VariableAssignment {
-    pub ident: Box<Node>,
-    pub constant: bool,
-    pub value: Box<Node>,
-    pub typ: Option<Box<Node>>,
 }
 
 #[derive(Debug)]
