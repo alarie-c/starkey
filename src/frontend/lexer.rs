@@ -1,4 +1,4 @@
-use crate::token::{Token, TokenKind};
+use crate::frontend::token::{Token, TokenKind};
 
 #[derive(Debug)]
 pub struct Lexer<'a> {

@@ -1,6 +1,6 @@
 use crate::{
-    node::{BinaryExpression, Node},
-    token::{Token, TokenKind},
+    frontend::node::{BinaryExpression, Node},
+    frontend::token::{Token, TokenKind},
 };
 
 pub struct Parser<'a> {
