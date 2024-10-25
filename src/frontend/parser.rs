@@ -49,11 +49,18 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Suprisingly simple
+    /// We skip some tokens depending on what we matched in the slice from parse_expr()
+    /// Then, we look for a colon to tell if there's a type annotation anywhere.
+    /// 
+    /// From there it's just a matter of moving ahead, parsing, then moving ahead again
+    /// Will return Node::Var if var is true
+    /// The rest of the members stay exactly the same though
     fn parse_new(&mut self, name: &'a str, var: bool) -> Node<'a> {
         let ident = Node::Ident(name);
         self.pos += 1; // we already know this exists from the slice in parse_expr()
         if var { self.pos += 1 } // ditto
-        
+
         // Look for a type annotation
         if self.lookahead_for(1, TokenKind::Colon) {
             println!("Type annotation found");
