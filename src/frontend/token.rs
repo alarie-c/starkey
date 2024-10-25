@@ -1,12 +1,12 @@
 /// Token stores the token variant and position in the source code
 #[derive(Debug)]
-pub struct Token {
-    pub kind: TokenKind,
+pub struct Token<'a> {
+    pub kind: TokenKind<'a>,
     pub span: TokenSpan,
 }
 
-impl Token {
-    pub fn new(kind: TokenKind, begin: usize, end: usize) -> Self {
+impl<'a> Token<'a> {
+    pub fn new(kind: TokenKind<'a>, begin: usize, end: usize) -> Self {
         Self {
             kind,
             span: TokenSpan(begin, end - 1),
@@ -22,11 +22,12 @@ pub struct TokenSpan(usize, usize);
 /// Anything non-enumerated (e.g. string literals, numbers, and symbols) is stored
 /// in its variant's field (Str, Number, Ident) respectively
 #[derive(Debug, PartialEq, Eq)]
-pub enum TokenKind {
+pub enum TokenKind<'a> {
     // Operators
     Arrow,
     Colon,
     ColonColon,
+    Dot,
 
     // Comparison
     Equal,
@@ -47,9 +48,9 @@ pub enum TokenKind {
     Exponent,
 
     // Literals
-    Ident(String),
-    Number(String),
-    Str(String),
+    Ident(&'a str),
+    Number(&'a str),
+    Str(&'a str),
 
     // Keywords
     Let,
@@ -60,10 +61,11 @@ pub enum TokenKind {
     End,
 
     // Other
+    Newline,
     EOF,
 }
 
-impl TokenKind {
+impl<'a> TokenKind<'a> {
     pub fn is_branch_node(&self) -> bool {
         match self {
             &TokenKind::Ident(_) => false,

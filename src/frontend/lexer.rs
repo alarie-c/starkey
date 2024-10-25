@@ -4,7 +4,7 @@ use crate::frontend::token::{Token, TokenKind};
 pub struct Lexer<'a> {
     stream: &'a [u8],
     pos: usize,
-    output: Vec<Token>,
+    output: Vec<Token<'a>>,
 }
 
 impl<'a> Lexer<'a> {
@@ -44,6 +44,7 @@ impl<'a> Lexer<'a> {
                 [b'<', ..] => self.add_token(TokenKind::Less, self.pos, 1),
                 [b'>', ..] => self.add_token(TokenKind::More, self.pos, 1),
                 [b'!', ..] => self.add_token(TokenKind::Bang, self.pos, 1),
+                [b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();
@@ -69,7 +70,7 @@ impl<'a> Lexer<'a> {
                         let ident = self.ident();
 
                         // Look for keywords
-                        match ident.as_str() {
+                        match ident {
                             "let" => self.add_token(TokenKind::Let, begin, 3),
                             "const" => self.add_token(TokenKind::Const, begin, 5),
                             "if" => self.add_token(TokenKind::If, begin, 2),
@@ -81,6 +82,8 @@ impl<'a> Lexer<'a> {
                                 self.add_token(TokenKind::Ident(ident), begin, len);
                             },
                         }
+                        
+                        self.pos -= 1;
                     }
                 },
             }
@@ -92,23 +95,24 @@ impl<'a> Lexer<'a> {
         &self.output
     }
 
-    fn str(&mut self) -> Option<String> {
-        let mut buf = String::new();
+    fn str(&mut self) -> Option<&'a str> {
+        let start = self.pos + 1;
         loop {
             self.pos += 1;
             if self.pos >= self.stream.len() {
                 todo!("Non-terminating string literal")
             } else if self.stream[self.pos] != b'"' {
-                buf.push(self.stream[self.pos] as char);
+                continue;
             } else {
-                break;
+                // Calling unwrap() here because if the source file contains non-utf8 chars it should
+                // stop the compiler before the lexer is initialized...
+                return Some(std::str::from_utf8(&self.stream[start..self.pos - 1]).unwrap());
             }
         }
-        Some(buf)
     }
 
-    fn number(&mut self) -> String {
-        let mut buf = String::from(self.stream[self.pos] as char);
+    fn number(&mut self) -> &'a str {
+        let start = self.pos;
         loop {
             self.pos += 1;
             if self.pos >= self.stream.len() {
@@ -119,15 +123,13 @@ impl<'a> Lexer<'a> {
             {
                 self.pos -= 1; // move pos back to tokenize() can deal with the char we just consumed
                 break;
-            } else {
-                buf.push(self.stream[self.pos] as char);
             }
         }
-        buf
+        return std::str::from_utf8(&self.stream[start..self.pos]).unwrap();
     }
 
-    fn ident(&mut self) -> String {
-        let mut buf = String::from(self.stream[self.pos] as char);
+    fn ident(&mut self) -> &'a str {
+        let start = self.pos;
         loop {
             self.pos += 1;
             if self.pos >= self.stream.len() {
@@ -135,16 +137,13 @@ impl<'a> Lexer<'a> {
             } else if !self.stream[self.pos].is_ascii_alphanumeric()
                 && self.stream[self.pos] != b'_'
             {
-                self.pos -= 1; // move pos back to tokenize() can deal with the char we just consumed
                 break;
-            } else {
-                buf.push(self.stream[self.pos] as char);
             }
         }
-        buf
+        return std::str::from_utf8(&self.stream[start..self.pos]).unwrap();
     }
 
-    fn add_token(&mut self, kind: TokenKind, begin: usize, width: usize) {
+    fn add_token(&mut self, kind: TokenKind<'a>, begin: usize, width: usize) {
         self.output.push(Token::new(kind, begin, begin + width));
     }
 }

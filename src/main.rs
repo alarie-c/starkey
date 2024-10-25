@@ -1,5 +1,7 @@
 use std::{env, fs};
 
+use frontend::parser;
+
 mod frontend;
 mod backend;
 
@@ -18,8 +20,11 @@ fn main() {
 
         // Create parser and parse
         let mut parser = frontend::parser::Parser::new(tokens);
-        let ast = parser.parse_stream();
-        dbg!(&ast);
+        parser.parse();
+        dbg!(&parser.ast);
+        // let mut parser = frontend::parser::Parser::new(tokens);
+        // let ast = parser.parse_stream();
+        // dbg!(&ast);
 
         // Create evaluator
         // let mut evaluator = eval::Evaluator::new();

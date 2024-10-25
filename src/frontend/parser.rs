@@ -1,28 +1,23 @@
-use crate::{
-    frontend::node::{BinaryExpression, Node},
-    frontend::token::{Token, TokenKind},
-};
+use super::{node::Node, token::{Token, TokenKind}};
 
 pub struct Parser<'a> {
-    variants: Vec<&'a TokenKind>,
-    tokens: &'a Vec<Token>,
+    pub ast: Vec<Node<'a>>,
+    variants: Vec<&'a TokenKind<'a>>,
+    tokens: &'a Vec<Token<'a>>,
     pos: usize,
-    ast: Vec<Node>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(stream: &'a Vec<Token>) -> Self {
+    pub fn new(stream: &'a Vec<Token<'a>>) -> Self {
         Self {
+            ast: Vec::new(),
             variants: stream.iter().map(|t| &t.kind).collect(),
             tokens: stream,
             pos: 0usize,
-            ast: Vec::new(),
         }
     }
 
-    pub fn parse_stream(&mut self) -> Vec<Node> {
-        let mut ast = Vec::<Node>::new();
-
+    pub fn parse(&mut self) {
         loop {
             // Check for EOF condition
             if &self.pos >= &self.tokens.len() {
@@ -32,270 +27,66 @@ impl<'a> Parser<'a> {
             let current = self.variants.get(self.pos).unwrap();
 
             // Attempt to parse an expression
-            if current.is_branch_node() {
-                match self.parse_expr() {
-                    Some(n) => ast.push(n),
-                    None => {}
-                }
+            if !current.is_branch_node() {
+                let n = self.parse_expr();
+                self.ast.push(n);
             }
 
             // Advance position
             self.pos += 1;
         }
-
-        // Return AST
-        ast
     }
 
-    /// Parses the current token regardless of if it is a branch node or not
-    /// Called by functions that construct complicated nodes contained boxed nodes
-    /// Will return None for unexpected tokens, its the calling function's job to deal
-    /// with unexpected tokens as happen
-    fn parse_expr(&mut self) -> Option<Node> {
+    fn parse_expr(&mut self) -> Node<'a> {
         match self.variants.as_slice()[self.pos..] {
-            [TokenKind::Plus, ..]
-            | [TokenKind::Minus, ..]
-            | [TokenKind::Star, ..]
-            | [TokenKind::Slash, ..]
-            | [TokenKind::Modulo, ..]
-            | [TokenKind::Exponent, ..]
-            => self.parse_binary_expression(None),
-
-            [TokenKind::Number(v), ..] => self.parse_number(v),
-            [TokenKind::Str(v), ..] => self.parse_str(v),
-            [TokenKind::Ident(n), ..] => self.parse_ident(n),
-
-
-            [TokenKind::Let, ..] => self.parse_variable_assignment(false),
-            [TokenKind::Const, ..] => self.parse_variable_assignment(true),
-
-            _ => Some(Node::Exit(0)),
+            [&TokenKind::Ident(_), ..] => self.parse_ident(false),
+            [&TokenKind::EOF, ..] => self.parse_eof(),
+            _ => panic!("Unexpected token"),
         }
     }
 
-    fn parse_binary_expression(&mut self, optional_lhs: Option<Node>) -> Option<Node> {
-        let op = match self.variants[self.pos] {
-            &TokenKind::Plus => '+' as u8,
-            &TokenKind::Minus => '-' as u8,
-            &TokenKind::Star => '*' as u8,
-            &TokenKind::Slash => '/' as u8,
-            &TokenKind::Modulo => '%' as u8,
-            &TokenKind::Exponent => '^' as u8,
-            _ => todo!("recover invalid binop token"),
-        };
-        
-        // Get the left node
-        let lhs = self
-            .back()
-            .then(|| {
-                self.parse_expr().unwrap_or_else(|| {
-                    todo!("recover invalid lhs");
-                })
-            })
-            .unwrap_or_else(|| {
-                todo!("recover missing lhs");
-            });
-
-        self.pos += 1;
-
-        // Get the right node
-        let rhs = self
-            .advance()
-            .then(|| {
-                self.parse_expr().unwrap_or_else(|| {
-                    todo!("recover invalid rhs");
-                })
-            })
-            .unwrap_or_else(|| {
-                todo!("recover missing rhs");
-            });
-
-        // Look for possible nested expressions
-        let nested_expr: Option<&TokenKind> = self
-            .advance()
-            .then(|| {
-                self.variants[self.pos]
-            });
-
-        match nested_expr {
-            Some(k) => {
-                match k {
-                    &TokenKind::Plus
-                    | &TokenKind::Minus
-                    | &TokenKind::Star
-                    | &TokenKind::Slash
-                    | &TokenKind::Modulo
-                    | &TokenKind::Exponent
-                => {
-                    // Get new expr and set it's LHS to current the RHS
-                    let expr = self.parse_binary_expression(Some(rhs)).unwrap_or_else(|| {
-                        todo!("recover invalid nested binary expr");
-                    });
-                    return Some(Node::BinaryExpression(BinaryExpression {
-                        lhs: if optional_lhs.is_some() { Box::new(optional_lhs.unwrap()) } else { Box::new(lhs) },
-                        rhs: Box::new(expr),
-                        op,
-                    }));
-                },
-                _ => {}
-                }
-            },
-            _ => {},
-        }
-
-        return Some(Node::BinaryExpression(BinaryExpression {
-            lhs: if optional_lhs.is_some() { Box::new(optional_lhs.unwrap()) } else { Box::new(lhs) },
-            rhs: Box::new(rhs),
-            op,
-        }));
-    }
-
-    /// Parent Format (with annotation): `let <ident> : <ident> = <value>`
-    ///
-    /// Parent Format (without annotation): `let <ident> = <value>`
-    /// Will return a node containing other nodes for the variable assignment
-    fn parse_variable_assignment(&mut self, constant: bool) -> Option<Node> {
-        // Get the name of the identifier
-        let ident = self
-            .advance()
-            .then(|| {
-                self.parse_expr().unwrap_or_else(|| {
-                    todo!("recover invalid name");
-                })
-            })
-            .unwrap();
-
-        // Check for type annotation
-        if !self.advance() {
-            todo!("recover missing operator 1")
-        }
-        let next = self.variants.get(self.pos).unwrap();
-
-        // Type annotation present
-        if *next == &TokenKind::Colon {
-            // Look for type and value
-            let typ = self
-                .advance()
-                .then(|| {
-                    self.parse_expr().unwrap_or_else(|| {
-                        todo!("recover invalid type");
-                    })
-                })
-                .unwrap();
-            dbg!(&typ);
-            // Skip the equal sign
-            if !self.advance() {
-                todo!("recover missing operator 2")
-            }
-
-            // Get the expression value
-            let value = self
-                .advance()
-                .then(|| {
-                    self.parse_expr().unwrap_or_else(|| {
-                        todo!("recover invalid value");
-                    })
-                })
-                .unwrap();
-
-            // Return the node
-            Some(Node::VariableAssignment {
-                ident: Box::new(ident),
-                constant,
-                value: Box::new(value),
-                typ: Some(Box::new(typ)),
-            })
-
-        // Type annotation absent
-        } else if *next == &TokenKind::Equal {
-            // Get the expression value
-            let value = self
-                .advance()
-                .then(|| {
-                    self.parse_expr().unwrap_or_else(|| {
-                        todo!("recover invalid value");
-                    })
-                })
-                .unwrap();
-
-            // Return the node
-            Some(Node::VariableAssignment {
-                ident: Box::new(ident),
-                constant,
-                value: Box::new(value),
-                typ: None,
-            })
-
-        // Got something other than = or :
-        } else {
-            todo!("invalid operator")
-        }
-    }
-
-    fn parse_number(&mut self, value: &String) -> Option<Node> {        
-        if value.contains(".") {
-            // Floating point number literal
-            let parsed: f32 = value.parse().unwrap_or_else(|_| {
-                todo!("Float parse error");
-            });
-            Some(Node::Float(parsed))
-        } else {
-            // Floating point number literal
-            let parsed: i32 = value.parse().unwrap_or_else(|_| {
-                todo!("Int parse error");
-            });
-            Some(Node::Integer(parsed))
-        }
-    }
-
-    fn parse_str(&mut self, value: &String) -> Option<Node> {
-        Some(Node::Str(value.to_string()))
-    }
-
-    fn parse_ident(&mut self, name: &String) -> Option<Node> {
-        // TODO: Add look left and look right logic
-        Some(Node::Ident(name.to_string()))
-    }
-
-    /// Attempts to advance the position of the parser
-    /// If successful, will return Ok(bool) based on if the variant matches provided variant
-    /// If unsuccessful, will return Err(())
-    fn assert_next(&mut self, kind: &TokenKind) -> Result<bool, ()> {
-        // Look for the next token and
-        self.pos += 1;
-        match self.variants.get(self.pos) {
-            Some(t) => {
-                if *t == kind {
-                    Ok(true)
+    /// This function parses an Ident token and then looks to the left and right for 
+    /// possible attempts to access members or methods
+    /// 
+    /// If the identifier is being read right to left, the ORIGINAL Node::AccessMember
+    /// must be returned such that AccessMember { parent: Ident @ pos - 2, child: Ident @ pos }
+    /// 
+    /// If the identifier is being read from left to right, the most recent Node::AcessMember
+    /// must be returned such that AccessMember { parent: Ident @ pos, child: Ident @ pos + 1 }
+    fn parse_ident(&mut self, rl: bool) -> Node<'a> {
+        // Start by getting the current thing
+        match self.variants.get(self.pos).unwrap() {
+            TokenKind::Ident(s) => {
+                if rl {
+                    // Parsing right to left
+                    return Node::Ident(s);
                 } else {
-                    Ok(false)
+                    // Parsing left to right
+                    println!("{}", s);
+                    let current = Node::Ident(s);
+                    if self.lookahead_for(1, TokenKind::Dot) && self.pos + 2 < self.variants.len() {
+                        self.pos += 2;
+                        let child = self.parse_ident(false);
+                        return Node::AccessMember { parent: Box::new(current), child: Box::new(child) };
+                    } else {
+                        return current;
+                    }
                 }
             }
-            None => Err(()),
+            _ => panic!("Expected identifier"),
         }
     }
 
-    // Advances the parser's position and returns true or false
-    // True -> success
-    // False -> EOF condition reached
-    fn advance(&mut self) -> bool {
-        if self.pos >= self.tokens.len() {
-            false
-        } else {
-            self.pos += 1;
-            true
-        }
+    fn parse_eof(&mut self) -> Node<'a> {
+        Node::Exit(0)
     }
 
-    // Advances the parser's position and returns true or false
-    // True -> success
-    // False -> EOF condition reached
-    fn back(&mut self) -> bool {
-        if self.pos == 0 {
-            false
+    fn lookahead_for(&mut self, n: isize, k: TokenKind) -> bool {
+        let t = self.variants.get((self.pos as isize + n) as usize);
+        if t.is_some_and(|t| t == &&k) {
+            return true;
         } else {
-            self.pos -= 1;
-            true
+            return false;
         }
-    }
+    } 
 }
