@@ -1,12 +1,5 @@
 #[derive(Debug)]
 pub enum Node<'a> {
-    VariableAssignment {
-        ident: Box<Self>,
-        constant: bool,
-        value: Box<Self>,
-        typ: Option<Box<Self>>,
-    },
-
     AccessMember {
         parent: Box<Self>,
         child: Box<Self>,
@@ -17,6 +10,22 @@ pub enum Node<'a> {
     Integer(i32),
     Str(&'a str),
     Ident(&'a str),
+
+    // Variables & Values
+    Var {
+        ident: Box<Self>,
+        value: Box<Self>,
+        typ: Option<Box<Self>>,
+    },
+    New {
+        ident: Box<Self>,
+        value: Box<Self>,
+        typ: Option<Box<Self>>,
+    },
+    Set {
+        ident: Box<Self>,
+        value: Box<Self>,
+    },
 
     // Other
     Exit(i32),

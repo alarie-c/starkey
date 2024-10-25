@@ -71,8 +71,8 @@ impl<'a> Lexer<'a> {
 
                         // Look for keywords
                         match ident {
-                            "let" => self.add_token(TokenKind::Let, begin, 3),
-                            "const" => self.add_token(TokenKind::Const, begin, 5),
+                            "new" => self.add_token(TokenKind::New, begin, 3),
+                            "var" => self.add_token(TokenKind::Var, begin, 5),
                             "if" => self.add_token(TokenKind::If, begin, 2),
                             "else" => self.add_token(TokenKind::Else, begin, 4),
                             "elif" => self.add_token(TokenKind::Elif, begin, 4),
@@ -106,7 +106,7 @@ impl<'a> Lexer<'a> {
             } else {
                 // Calling unwrap() here because if the source file contains non-utf8 chars it should
                 // stop the compiler before the lexer is initialized...
-                return Some(std::str::from_utf8(&self.stream[start..self.pos - 1]).unwrap());
+                return Some(std::str::from_utf8(&self.stream[start..self.pos]).unwrap());
             }
         }
     }

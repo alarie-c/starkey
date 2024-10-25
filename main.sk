@@ -1,1 +1,1 @@
-parent.child
+new var msg: str = "hello"

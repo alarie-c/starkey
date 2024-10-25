@@ -53,8 +53,8 @@ pub enum TokenKind<'a> {
     Str(&'a str),
 
     // Keywords
-    Let,
-    Const,
+    New,
+    Var,
     If,
     Else,
     Elif,
