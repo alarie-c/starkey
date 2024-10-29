@@ -1,22 +1,16 @@
 /// Token stores the token variant and position in the source code
 #[derive(Debug)]
-pub struct Token<'a> {
-    pub kind: TokenKind<'a>,
-    pub span: TokenSpan,
-}
+pub struct Token<'a>(pub TokenKind<'a>, pub TokenSpan);
 
 impl<'a> Token<'a> {
     pub fn new(kind: TokenKind<'a>, begin: usize, end: usize) -> Self {
-        Self {
-            kind,
-            span: TokenSpan(begin, end - 1),
-        }
+        Self(kind, TokenSpan(begin, end - 1))
     }
 }
 
 /// Stores beginning and end, inclusive
 #[derive(Debug)]
-pub struct TokenSpan(usize, usize);
+pub struct TokenSpan(pub usize, pub usize);
 
 /// Variants for every kind of token recognized by the program
 /// Anything non-enumerated (e.g. string literals, numbers, and symbols) is stored
@@ -27,6 +21,7 @@ pub enum TokenKind<'a> {
     Arrow,
     Colon,
     ColonColon,
+    SemiColon,
     Dot,
 
     // Comparison
@@ -53,8 +48,8 @@ pub enum TokenKind<'a> {
     Str(&'a str),
 
     // Keywords
-    New,
     Var,
+    Const,
     If,
     Else,
     Elif,

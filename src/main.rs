@@ -18,14 +18,6 @@ fn main() {
         let mut lexer = frontend::lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
 
-        // Create parser and parse
-        // let mut parser = frontend::parser::Parser::new(tokens);
-        // parser.parse();
-        // dbg!(&parser.ast);
-        // let mut parser = frontend::parser::Parser::new(tokens);
-        // let ast = parser.parse_stream();
-        // dbg!(&ast);
-
         // Create evaluator
         // let mut evaluator = eval::Evaluator::new();
         // evaluator.eval(ast);

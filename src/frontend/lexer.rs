@@ -45,10 +45,11 @@ impl<'a> Lexer<'a> {
                 [b'%', ..] => self.add_token(TokenKind::Modulo, self.pos, 1),
                 [b'^', ..] => self.add_token(TokenKind::Exponent, self.pos, 1),
                 [b':', ..] => self.add_token(TokenKind::Colon, self.pos, 1),
+                [b';', ..] => self.add_token(TokenKind::SemiColon, self.pos, 1),
                 [b'<', ..] => self.add_token(TokenKind::Less, self.pos, 1),
                 [b'>', ..] => self.add_token(TokenKind::More, self.pos, 1),
                 [b'!', ..] => self.add_token(TokenKind::Bang, self.pos, 1),
-                [b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
+                //[b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();
@@ -151,8 +152,8 @@ impl<'a> Lexer<'a> {
 
 fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
     let mut map = HashMap::<&'a str, TokenKind<'a>>::new();
-    map.insert("new", TokenKind::New);
     map.insert("var", TokenKind::Var);
+    map.insert("const", TokenKind::Const);
     map.insert("if", TokenKind::If);
     map.insert("elif", TokenKind::Elif);
     map.insert("else", TokenKind::Else);
