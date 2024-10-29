@@ -21,7 +21,7 @@ pub struct TokenSpan(usize, usize);
 /// Variants for every kind of token recognized by the program
 /// Anything non-enumerated (e.g. string literals, numbers, and symbols) is stored
 /// in its variant's field (Str, Number, Ident) respectively
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind<'a> {
     // Operators
     Arrow,
@@ -38,7 +38,7 @@ pub enum TokenKind<'a> {
     LessEqual,
     More,
     MoreEqual,
-    
+
     // Arithmetic
     Plus,
     Minus,
@@ -58,7 +58,6 @@ pub enum TokenKind<'a> {
     If,
     Else,
     Elif,
-    End,
 
     // Other
     Newline,

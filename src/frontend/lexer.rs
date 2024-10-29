@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::frontend::token::{Token, TokenKind};
 
 #[derive(Debug)]
@@ -17,6 +19,8 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(&mut self) -> &Vec<Token> {
+        let kw_map = generate_keyword_map();
+
         loop {
             // Check for EOF condition
             if self.pos >= self.stream.len() {
@@ -55,7 +59,7 @@ impl<'a> Lexer<'a> {
                         }
                         None => todo!("Non-terminating literal"),
                     }
-                },
+                }
                 _ => {
                     // Tokenize number literals
                     if self.stream[self.pos].is_ascii_digit() {
@@ -67,25 +71,22 @@ impl<'a> Lexer<'a> {
                     // Tokenize identifiers or keywords
                     } else if self.stream[self.pos].is_ascii_alphanumeric() {
                         let begin = self.pos;
-                        let ident = self.ident();
+                        let chars = self.ident();
 
-                        // Look for keywords
-                        match ident {
-                            "new" => self.add_token(TokenKind::New, begin, 3),
-                            "var" => self.add_token(TokenKind::Var, begin, 5),
-                            "if" => self.add_token(TokenKind::If, begin, 2),
-                            "else" => self.add_token(TokenKind::Else, begin, 4),
-                            "elif" => self.add_token(TokenKind::Elif, begin, 4),
-                            "end" => self.add_token(TokenKind::End, begin, 3),
-                            _ => {
-                                let len = ident.len();
-                                self.add_token(TokenKind::Ident(ident), begin, len);
-                            },
+                        // Match chars to a keyword,
+                        // If no keyword found, push it to the output as an identifer
+                        // See `generate_keyword_map` function for the kw_map creation
+                        match kw_map.get(chars) {
+                            Some(kw) => self.add_token(kw.clone(), begin, chars.len()),
+                            None => {
+                                let len = chars.len();
+                                self.add_token(TokenKind::Ident(chars), begin, len);
+                            }
                         }
-                        
+
                         self.pos -= 1;
                     }
-                },
+                }
             }
 
             // Advance position
@@ -146,4 +147,14 @@ impl<'a> Lexer<'a> {
     fn add_token(&mut self, kind: TokenKind<'a>, begin: usize, width: usize) {
         self.output.push(Token::new(kind, begin, begin + width));
     }
+}
+
+fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
+    let mut map = HashMap::<&'a str, TokenKind<'a>>::new();
+    map.insert("new", TokenKind::New);
+    map.insert("var", TokenKind::Var);
+    map.insert("if", TokenKind::If);
+    map.insert("elif", TokenKind::Elif);
+    map.insert("else", TokenKind::Else);
+    map
 }
