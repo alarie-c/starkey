@@ -49,7 +49,7 @@ impl<'a> Lexer<'a> {
                 [b'<', ..] => self.add_token(TokenKind::Less, self.pos, 1),
                 [b'>', ..] => self.add_token(TokenKind::More, self.pos, 1),
                 [b'!', ..] => self.add_token(TokenKind::Bang, self.pos, 1),
-                //[b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
+                [b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();

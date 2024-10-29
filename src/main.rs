@@ -23,6 +23,11 @@ fn main() {
         // evaluator.eval(ast);
         // dbg!(&evaluator);
 
+        let parse_tree = frontend::parser::parse(tokens);
+        if parse_tree.is_some() {
+            dbg!(&parse_tree.unwrap());
+        }
+
         // dbg!(&tokens);
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");

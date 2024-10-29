@@ -1,1 +1,1 @@
-var class: module.type;
+module.class
