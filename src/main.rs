@@ -2,8 +2,8 @@ use std::{env, fs};
 
 use frontend::parser;
 
-mod frontend;
 mod backend;
+mod frontend;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -19,9 +19,9 @@ fn main() {
         let tokens = lexer.tokenize();
 
         // Create parser and parse
-        let mut parser = frontend::parser::Parser::new(tokens);
-        parser.parse();
-        dbg!(&parser.ast);
+        // let mut parser = frontend::parser::Parser::new(tokens);
+        // parser.parse();
+        // dbg!(&parser.ast);
         // let mut parser = frontend::parser::Parser::new(tokens);
         // let ast = parser.parse_stream();
         // dbg!(&ast);
