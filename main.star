@@ -1,1 +1,1 @@
-module.class
+"hello" 3.14 5 module module.class.hamburger

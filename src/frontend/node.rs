@@ -1,12 +1,10 @@
 #[derive(Debug)]
-pub enum Node<'a> {
+pub enum Node {
     // Atoms
-    Ident(&'a str),
+    Integer(i32),
     Float(f32),
-    Itenger(i32),
-    Str(&'a str),
+    Str(String),
+    Ident(String),
 
-    // Other
-    QIdent(Box<Node<'a>>, Box<Node<'a>>),
-
+    QualifiedIdent(Box<Node>, Box<Node>),
 }

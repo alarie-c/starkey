@@ -18,17 +18,11 @@ fn main() {
         let mut lexer = frontend::lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
 
-        // Create evaluator
-        // let mut evaluator = eval::Evaluator::new();
-        // evaluator.eval(ast);
-        // dbg!(&evaluator);
+        // Create parser and parse
+        let mut parser = frontend::parser::Parser::new(tokens);
+        parser.parse();
+        dbg!(&parser);
 
-        let parse_tree = frontend::parser::parse(tokens);
-        if parse_tree.is_some() {
-            dbg!(&parse_tree.unwrap());
-        }
-
-        // dbg!(&tokens);
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");
         std::process::exit(1);

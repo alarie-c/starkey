@@ -68,6 +68,7 @@ impl<'a> Lexer<'a> {
                         let num = self.number();
                         let len = num.len();
                         self.add_token(TokenKind::Number(num), begin, len);
+                        self.pos -= 1;
 
                     // Tokenize identifiers or keywords
                     } else if self.stream[self.pos].is_ascii_alphanumeric() {
@@ -123,7 +124,6 @@ impl<'a> Lexer<'a> {
                 && self.stream[self.pos] != b'_'
                 && self.stream[self.pos] != b'.'
             {
-                self.pos -= 1; // move pos back to tokenize() can deal with the char we just consumed
                 break;
             }
         }
