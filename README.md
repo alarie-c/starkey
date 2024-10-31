@@ -8,3 +8,6 @@ A data-science programming langauge made to make the manipulation and handling o
 
 ## 10/25/24
 > Redid the lexer and parser to use `&'a str` instead of creating random `String` variables for no reason. Everything points to the source file, everything lives for `'a`.
+
+## 10/31/24
+> I began to write the parser with the intention of it being a shift-reduce parser... It's not, but it works and is better than my original parser(s) so I'm going to work with it for now and then optimize it later as needed.
