@@ -8,4 +8,7 @@ pub enum Node {
 
     QualifiedIdent(Box<Node>, Box<Node>),
     BinaryExpr(Box<Node>, Box<Node>, char),
+    
+    VariableExpr(Box<Node>, Option<Box<Node>>, Box<Node>),
+    ConstExpr(Box<Node>, Option<Box<Node>>, Box<Node>),
 }

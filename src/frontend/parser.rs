@@ -1,42 +1,31 @@
+use std::iter::Peekable;
+
 use super::{node::Node, token::{Token, TokenKind}};
 
 #[derive(Debug)]
-pub struct Parser<'a> {
-    tokens: &'a Vec<Token<'a>>,
+pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
+    tokens: Peekable<Iter>,
     stack: Vec<&'a Token<'a>>,
     tree: Vec<Node>,
-    pos: usize,
+    len: usize
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> Self {
+impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
+    pub fn new(tokens: Iter, len: usize) -> Self {
         Self {
-            tokens,
+            tokens: tokens.peekable(),
             stack: Vec::new(),
             tree: Vec::new(),
-            pos: 0,
+            len,
         }
     }
 
     pub fn parse(&mut self) {
-        while self.pos < self.tokens.len() {
-            // Push the token to the stack
-            // self.stack.push(self.tokens.get(self.pos).unwrap());
-            
-            // Attempt to reduce whatever's on the stack
-            // match self.try_reduce() {
-            //     Some(n) => self.tree.push(n),
-            //     None => {}
-            // }
-
-            let token = self.tokens.get(self.pos).unwrap();
+        while let Some(token) = self.tokens.next() {
             match self.parse_token(token) {
                 Some(n) => self.tree.push(n),
                 None => {},
             }
-
-            // Advance
-            self.pos += 1;
         }
     }
 
@@ -52,7 +41,49 @@ impl<'a> Parser<'a> {
             Token(TokenKind::Minus, ..) => Some(self.parse_binary_expr('-')),
             Token(TokenKind::Star, ..) => Some(self.parse_binary_expr('*')),
             Token(TokenKind::Slash, ..) => Some(self.parse_binary_expr('/')),
+
+            // Variables & Constants
+            Token(TokenKind::Var, ..) => Some(self.parse_variable_expr(false)),
+            Token(TokenKind::Const, ..) => Some(self.parse_variable_expr(true)),
             _ => None,
+        }
+    }
+
+    fn parse_variable_expr(&mut self, constant: bool) -> Node {
+        let ident = Box::new(self.parse_next().unwrap_or_else(|| {
+            panic!("Expected identifier for var expr")
+        }));
+
+        let mut typ: Option<Box<Node>> = None;
+        match self.tokens.peek() {
+            // Do type annotation
+            Some(peeked_token) => if peeked_token.0 == TokenKind::Colon {
+                // Skip the current token (which is a colon)
+                let _ = self.tokens.next();
+                
+                // Parse the new thing (should be an identifier)
+                typ = Some(Box::new(self.parse_next().unwrap_or_else(|| {
+                    panic!("Expected a type annotation after :")
+                })));
+            },
+            
+            // No type annotation
+            None => typ = None,
+        }
+
+        // Skipp the current token
+        let _ = self.tokens.next();
+        
+        // Look for value of var expr
+        let value = Box::new(self.parse_next().unwrap_or_else(|| {
+            panic!("Expected a valid value for var expr")
+        }));
+
+        // Return the node
+        if constant {
+            Node::ConstExpr(ident, typ, value)
+        } else {
+            Node::VariableExpr(ident, typ, value)
         }
     }
 
@@ -62,13 +93,8 @@ impl<'a> Parser<'a> {
         });
 
         // Get the next token and attempt to get it into a node
-        if self.pos + 1 < self.tokens.len() {
-            self.pos += 1;
-            let new_token = self.tokens.get(self.pos).unwrap();
-            let right = self.parse_token(new_token).unwrap_or_else(|| {
-                panic!("Expected a valid node for RHS ")
-            });
-            return Node::QualifiedIdent(Box::new(left), Box::new(right));
+        if let Some(right) = self.parse_next() {
+            Node::QualifiedIdent(Box::new(left), Box::new(right))
         } else {
             panic!("No RHS identifier for QualifiedIdent")
         }
@@ -77,17 +103,6 @@ impl<'a> Parser<'a> {
     fn parse_ident(&mut self, ident: &'a str) -> Node {
         Node::Ident(ident.to_string())
     }
-
-    /// Attempts to reduce by comparing the stack to rules
-    /// Will pop the tokens that are reduced and return them
-    /// Returns `None` if nothing is able to be reduced.
-    // fn try_reduce(&mut self) -> Option<Node> {
-    //     match self.stack.as_slice() {
-    //         [Token(TokenKind::Str(s), ..), ..] => Some(self.parse_str(s)),
-    //         [Token(TokenKind::Number(n), ..), ..] => Some(self.parse_number(n)),
-    //         _ => None,
-    //     }
-    // }
 
     fn parse_str(&mut self, string: &'a str) -> Node {
         //let _ = self.stack.pop();
@@ -115,15 +130,18 @@ impl<'a> Parser<'a> {
         });
 
         // Get the next token and attempt to get it into a node
-        if self.pos + 1 < self.tokens.len() {
-            self.pos += 1;
-            let new_token = self.tokens.get(self.pos).unwrap();
-            let right = self.parse_token(new_token).unwrap_or_else(|| {
-                panic!("Expected a valid node for RHS")
-            });
+        if let Some(right) = self.parse_next() {
             return Node::BinaryExpr(Box::new(left), Box::new(right), op)
         } else {
             panic!("No RHS number for BinaryExpr")
+        }
+    }
+
+    fn parse_next(&mut self) -> Option<Node> {
+        if let Some(token) = self.tokens.next() {
+            self.parse_token(token)
+        } else {
+            None
         }
     }
 }
