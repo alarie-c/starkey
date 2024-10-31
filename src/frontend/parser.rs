@@ -46,6 +46,12 @@ impl<'a> Parser<'a> {
             Token(TokenKind::Number(n), ..) => Some(self.parse_number(n)),
             Token(TokenKind::Ident(i), ..) => Some(self.parse_ident(i)),
             Token(TokenKind::Dot, ..) => Some(self.parse_qualified_ident()),
+
+            // Arithmetic
+            Token(TokenKind::Plus, ..) => Some(self.parse_binary_expr('+')),
+            Token(TokenKind::Minus, ..) => Some(self.parse_binary_expr('-')),
+            Token(TokenKind::Star, ..) => Some(self.parse_binary_expr('*')),
+            Token(TokenKind::Slash, ..) => Some(self.parse_binary_expr('/')),
             _ => None,
         }
     }
@@ -100,6 +106,24 @@ impl<'a> Parser<'a> {
                 Ok(v) => return Node::Integer(v),
                 Err(_) => panic!("Error parsing integer")
             };
+        }
+    }
+
+    fn parse_binary_expr(&mut self, op: char) -> Node {
+        let left = self.tree.pop().unwrap_or_else(|| {
+            panic!("No LHS number for BinaryExpr")
+        });
+
+        // Get the next token and attempt to get it into a node
+        if self.pos + 1 < self.tokens.len() {
+            self.pos += 1;
+            let new_token = self.tokens.get(self.pos).unwrap();
+            let right = self.parse_token(new_token).unwrap_or_else(|| {
+                panic!("Expected a valid node for RHS")
+            });
+            return Node::BinaryExpr(Box::new(left), Box::new(right), op)
+        } else {
+            panic!("No RHS number for BinaryExpr")
         }
     }
 }

@@ -1,1 +1,1 @@
-"hello" 3.14 5 module module.class.hamburger
+"hello" 3.14 5 module module.class.hamburger 5 + 10 - 100

@@ -7,4 +7,5 @@ pub enum Node {
     Ident(String),
 
     QualifiedIdent(Box<Node>, Box<Node>),
+    BinaryExpr(Box<Node>, Box<Node>, char),
 }
