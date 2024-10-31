@@ -5,18 +5,14 @@ use super::{node::Node, token::{Token, TokenKind}};
 #[derive(Debug)]
 pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
     tokens: Peekable<Iter>,
-    stack: Vec<&'a Token<'a>>,
     tree: Vec<Node>,
-    len: usize
 }
 
 impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
-    pub fn new(tokens: Iter, len: usize) -> Self {
+    pub fn new(tokens: Iter) -> Self {
         Self {
             tokens: tokens.peekable(),
-            stack: Vec::new(),
             tree: Vec::new(),
-            len,
         }
     }
 
@@ -73,7 +69,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
         // Skipp the current token
         let _ = self.tokens.next();
-        
+
         // Look for value of var expr
         let value = Box::new(self.parse_next().unwrap_or_else(|| {
             panic!("Expected a valid value for var expr")

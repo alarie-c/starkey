@@ -17,10 +17,9 @@ fn main() {
         // Create lexer and tokenize
         let mut lexer = frontend::lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
-        let ntokens = tokens.len();
 
         // Create parser and parse
-        let mut parser = frontend::parser::Parser::new(tokens.iter(), ntokens);
+        let mut parser = frontend::parser::Parser::new(tokens.iter());
         parser.parse();
         dbg!(&parser);
 
