@@ -1,4 +1,4 @@
 pub mod lexer;
-pub mod node;
+pub mod expr;
 pub mod parser;
 pub mod token;
