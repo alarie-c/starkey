@@ -33,24 +33,33 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         dbg!(&self.tree);
         
         match self.state {
-            "VAR EXPR" => self.reduce_var_expr(),
+            "VAR EXPR" => self.reduce_var_expr(false),
+            "CONST EXPR" => self.reduce_var_expr(true),
             _ => panic!("Unexpected state {}", self.state),
         }
     }
 
-    fn reduce_var_expr(&mut self) -> Option<()> {
+    fn reduce_var_expr(&mut self, constant: bool) -> Option<()> {
         if self.stack.len() == 2 {
             // Variable assignment, no type annotation
             let value = self.stack.pop().unwrap();
             let name = self.stack.pop().unwrap();
-            self.tree.push(Expr::VariableExpr(Box::new(name), None, Box::new(value)));
+            if constant {
+                self.tree.push(Expr::ConstExpr(Box::new(name), None, Box::new(value)));
+            } else {
+                self.tree.push(Expr::VariableExpr(Box::new(name), None, Box::new(value)));
+            }
             Some(())
         } else if self.stack.len() == 3 {
             // Variable assignment, with type annotation
             let value = self.stack.pop().unwrap();
             let name = self.stack.pop().unwrap();
             let typ = self.stack.pop().unwrap();
-            self.tree.push(Expr::VariableExpr(Box::new(name), Some(Box::new(typ)), Box::new(value)));
+            if constant {
+                self.tree.push(Expr::ConstExpr(Box::new(name), Some(Box::new(typ)), Box::new(value)));
+            } else {
+                self.tree.push(Expr::VariableExpr(Box::new(name), Some(Box::new(typ)), Box::new(value)));
+            }
             Some(())
         } else {
             None
@@ -64,6 +73,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             Token(TokenKind::Dot, ..) => self.expr_qualified_ident(),
             Token(TokenKind::EOF, ..) => println!("ENDING"),
             Token(TokenKind::Var, ..) => self.state = "VAR EXPR",
+            Token(TokenKind::Const, ..) => self.state = "CONST EXPR",
             Token(TokenKind::SemiColon, ..) => {
                 match self.try_reduce() {
                     Some(_) => self.state = "",

@@ -1,2 +1,2 @@
 var x = 10;
-var module.class x = 15;
+const module.class x = 15;
