@@ -6,10 +6,11 @@ pub enum Expr {
     Str(String),
     Ident(String),
 
-    AnnotatedIdent(Box<Expr>, Box<Expr>),
     QualifiedIdent(Box<Expr>, Box<Expr>),
+    
     BinaryExpr(Box<Expr>, Box<Expr>, char),
     
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
+    MutateExpr(Box<Expr>, Box<Expr>),
 }

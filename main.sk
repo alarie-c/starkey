@@ -1,2 +1,3 @@
 var x = 10;
+x -> 15;
 const module.class x = 15;

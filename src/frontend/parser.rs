@@ -35,7 +35,20 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         match self.state {
             "VAR EXPR" => self.reduce_var_expr(false),
             "CONST EXPR" => self.reduce_var_expr(true),
+            "MUTATION" => self.reduce_mutation(),
             _ => panic!("Unexpected state {}", self.state),
+        }
+    }
+
+    fn reduce_mutation(&mut self) -> Option<()> {
+        if self.stack.len() == 2 {
+            // Ident -> Value;
+            let value = self.stack.pop().unwrap();
+            let name = self.stack.pop().unwrap();
+            self.tree.push(Expr::MutateExpr(Box::new(name), Box::new(value)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -73,6 +86,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             Token(TokenKind::Dot, ..) => self.expr_qualified_ident(),
             Token(TokenKind::EOF, ..) => println!("ENDING"),
             Token(TokenKind::Var, ..) => self.state = "VAR EXPR",
+            Token(TokenKind::Arrow, ..) => self.state = "MUTATION",
             Token(TokenKind::Const, ..) => self.state = "CONST EXPR",
             Token(TokenKind::SemiColon, ..) => {
                 match self.try_reduce() {
@@ -85,7 +99,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 }
             }
             Token(TokenKind::Equal, ..) => {}
-            _ => panic!("Unexpected token!"),
+            _ => panic!("Unexpected token! {:?}", token),
         }
     }
 

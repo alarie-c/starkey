@@ -31,12 +31,12 @@ impl<'a> Lexer<'a> {
 
             // Attempt to match a token
             match self.stream[self.pos..] {
-                [b'-', b'>', ..] => self.add_token(TokenKind::Arrow, self.pos, 2),
-                [b':', b':', ..] => self.add_token(TokenKind::ColonColon, self.pos, 2),
-                [b'=', b'=', ..] => self.add_token(TokenKind::EqualEqual, self.pos, 2),
-                [b'!', b'=', ..] => self.add_token(TokenKind::BangEqual, self.pos, 2),
-                [b'<', b'=', ..] => self.add_token(TokenKind::LessEqual, self.pos, 2),
-                [b'>', b'=', ..] => self.add_token(TokenKind::MoreEqual, self.pos, 2),
+                [b'-', b'>', ..] => self.add_token2(TokenKind::Arrow, self.pos, 2),
+                [b':', b':', ..] => self.add_token2(TokenKind::ColonColon, self.pos, 2),
+                [b'=', b'=', ..] => self.add_token2(TokenKind::EqualEqual, self.pos, 2),
+                [b'!', b'=', ..] => self.add_token2(TokenKind::BangEqual, self.pos, 2),
+                [b'<', b'=', ..] => self.add_token2(TokenKind::LessEqual, self.pos, 2),
+                [b'>', b'=', ..] => self.add_token2(TokenKind::MoreEqual, self.pos, 2),
                 [b'=', ..] => self.add_token(TokenKind::Equal, self.pos, 1),
                 [b'-', ..] => self.add_token(TokenKind::Minus, self.pos, 1),
                 [b'+', ..] => self.add_token(TokenKind::Plus, self.pos, 1),
@@ -147,6 +147,10 @@ impl<'a> Lexer<'a> {
 
     fn add_token(&mut self, kind: TokenKind<'a>, begin: usize, width: usize) {
         self.output.push(Token::new(kind, begin, begin + width));
+    }
+    fn add_token2(&mut self, kind: TokenKind<'a>, begin: usize, width: usize) {
+        self.output.push(Token::new(kind, begin, begin + width));
+        self.pos += 1;
     }
 }
 
