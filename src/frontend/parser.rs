@@ -5,11 +5,13 @@ use super::{
     token::{Token, TokenKind},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum State {
     Empty,
-    VarExpr,
-    ConstExpr,
+    UntypedVarExpr,
+    UntypedConstExpr,
+    TypedVarExpr,
+    TypedConstExpr,
     MutationExpr,
 }
 
@@ -44,8 +46,10 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         dbg!(&self.tree);
 
         match self.state {
-            State::VarExpr => self.reduce_var_expr(false),
-            State::ConstExpr => self.reduce_var_expr(true),
+            State::UntypedVarExpr => self.reduce_var_expr(false, false),
+            State::UntypedConstExpr => self.reduce_var_expr(false, true),
+            State::TypedVarExpr => self.reduce_var_expr(true, false),
+            State::TypedConstExpr => self.reduce_var_expr(true, true),
             State::MutationExpr => self.reduce_mutation(),
             _ => panic!("Unexpected state {:?}", self.state),
         }
@@ -64,8 +68,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         }
     }
 
-    fn reduce_var_expr(&mut self, constant: bool) -> Option<()> {
-        if self.stack.len() == 2 {
+    fn reduce_var_expr(&mut self, typed: bool, constant: bool) -> Option<()> {
+        if self.stack.len() == 2 && !typed {
             // Variable assignment, no type annotation
             let value = self.stack.pop().unwrap();
             let name = self.stack.pop().unwrap();
@@ -77,11 +81,11 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                     .push(Expr::VariableExpr(Box::new(name), None, Box::new(value)));
             }
             Some(())
-        } else if self.stack.len() == 3 {
+        } else if self.stack.len() == 3 && typed {
             // Variable assignment, with type annotation
             let value = self.stack.pop().unwrap();
-            let name = self.stack.pop().unwrap();
             let typ = self.stack.pop().unwrap();
+            let name = self.stack.pop().unwrap();
             if constant {
                 self.tree.push(Expr::ConstExpr(
                     Box::new(name),
@@ -102,15 +106,32 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     }
 
     fn parse_expr(&mut self, token: &'a Token) {
-        match token {
-            Token(TokenKind::Number(n), ..) => self.expr_number(n),
-            Token(TokenKind::Ident(i), ..) => self.expr_ident(i),
-            Token(TokenKind::Dot, ..) => self.expr_qualified_ident(),
-            Token(TokenKind::EOF, ..) => println!("ENDING"),
-            Token(TokenKind::Var, ..) => self.state = State::VarExpr,
-            Token(TokenKind::Const, ..) => self.state = State::ConstExpr,
-            Token(TokenKind::Arrow, ..) => self.state = State::MutationExpr,
-            Token(TokenKind::SemiColon, ..) => match self.try_reduce() {
+        match token.0 {
+            TokenKind::Number(n) => self.expr_number(n),
+            TokenKind::Ident(i) => self.expr_ident(i),
+            TokenKind::Dot => self.expr_qualified_ident(),
+            TokenKind::EOF => println!("ENDING"),
+            TokenKind::Var => self.state = State::UntypedVarExpr,
+            TokenKind::Const => self.state = State::UntypedConstExpr,
+            TokenKind::Arrow => self.state = State::MutationExpr,
+
+            TokenKind::Equal => match self.state {
+                State::UntypedVarExpr
+                | State::TypedVarExpr
+                | State::TypedConstExpr
+                | State::UntypedConstExpr => {}
+                _ => panic!("Unexpected `=` in state: {:?}", self.state),
+            },
+
+            TokenKind::Colon => {
+                if self.state == State::UntypedVarExpr {
+                    self.state = State::TypedVarExpr;
+                } else if self.state == State::UntypedConstExpr {
+                    self.state = State::TypedConstExpr;
+                }
+            }
+
+            TokenKind::SemiColon => match self.try_reduce() {
                 Some(_) => self.state = State::Empty,
                 None => {
                     eprintln!("There was an error reducing the stack!");
@@ -118,7 +139,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                     dbg!(&self.tree);
                 }
             },
-            Token(TokenKind::Equal, ..) => {}
+            TokenKind::Equal => {}
             _ => panic!("Unexpected token! {:?}", token),
         }
     }
