@@ -1,1 +1,4 @@
-$ position + 5;
+def bytes_to_string(bytes: int): int {
+    var x = 5;
+    const y = 10;
+}

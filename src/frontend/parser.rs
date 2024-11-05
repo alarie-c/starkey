@@ -5,9 +5,11 @@ use super::{
     token::{Token, TokenKind},
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum State {
     Empty,
+    PreParamFunctionExpr,
+    PostParamFunctionExpr,
     PrintExpr,
     UntypedVarExpr,
     UntypedConstExpr,
@@ -53,7 +55,29 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             State::TypedVarExpr => self.reduce_var_expr(true, false),
             State::TypedConstExpr => self.reduce_var_expr(true, true),
             State::MutationExpr => self.reduce_mutation(),
+            State::PostParamFunctionExpr => self.reduce_function_expr(),
             _ => panic!("Unexpected state {:?}", self.state),
+        }
+    }
+
+    fn reduce_function_expr(&mut self) -> Option<()> {
+        // No return annotation
+        if self.stack.len() == 3 {
+            let block = self.stack.pop().unwrap();
+            let params = self.stack.pop().unwrap();
+            let ident = self.stack.pop().unwrap();
+            self.tree.push(Expr::FunctionExpr(Box::new(ident), Box::new(params), None, Box::new(block)));
+            Some(())
+        // Valid return annotation
+        } else if self.stack.len() == 4 {
+            let block = self.stack.pop().unwrap();
+            let returns = self.stack.pop().unwrap();
+            let params = self.stack.pop().unwrap();
+            let ident = self.stack.pop().unwrap();
+            self.tree.push(Expr::FunctionExpr(Box::new(ident), Box::new(params), Some(Box::new(returns)), Box::new(block)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -130,9 +154,24 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
             TokenKind::Var => self.state = State::UntypedVarExpr,
             TokenKind::Const => self.state = State::UntypedConstExpr,
+            TokenKind::Def => self.state = State::PreParamFunctionExpr,
+
             TokenKind::Arrow => self.state = State::MutationExpr,
 
-            TokenKind::LPar => self.expr_parens(),
+            TokenKind::LPar => {
+                match self.state {
+                    State::PreParamFunctionExpr => self.expr_parameters(),
+                    _ => self.expr_parens(),
+                }
+            }
+
+            TokenKind::LCurl => {
+                match self.state {
+                    State::PostParamFunctionExpr => self.expr_block(),
+                    _ => panic!("Unexpected `{{` in state: {:?}", self.state),
+                }
+            }
+
             TokenKind::Print => self.state = State::PrintExpr,
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
@@ -152,10 +191,13 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             },
 
             TokenKind::Colon => {
-                if self.state == State::UntypedVarExpr {
-                    self.state = State::TypedVarExpr;
-                } else if self.state == State::UntypedConstExpr {
-                    self.state = State::TypedConstExpr;
+                // Again, make sure colon is being used in the correct state here
+                match self.state {
+                    State::UntypedVarExpr => self.state = State::TypedVarExpr,
+                    State::UntypedConstExpr => self.state = State::TypedConstExpr,
+                    State::PreParamFunctionExpr => self.expr_parameter(),
+                    State::PostParamFunctionExpr => {},
+                    _ => panic!("Unexpected `:` in state: {:?}", self.state),
                 }
             }
 
@@ -171,6 +213,46 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         }
     }
 
+    fn expr_parameter(&mut self) {
+        let ident = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid LHS identifier for parameter");
+        });
+
+        if let Some(token) = self.tokens.next() {
+            self.parse_expr(token);
+            // Make sure we keep parsing just in case the identifier is qualified
+            while let Some(token) = self.tokens.peek() {
+                if token.0 != TokenKind::Dot { break; }
+                let token = self.tokens.next().unwrap();
+                self.parse_expr(token);
+            }
+            let typ = self.stack.pop().unwrap_or_else(|| {
+                panic!("Expected a valid RHS identifier for parameter");
+            });
+            self.stack
+                .push(Expr::Parameter(Box::new(ident), Box::new(typ)));
+        } else {
+            panic!("No RHS identifier for parameter")
+        }
+    }
+    
+    fn expr_parameters(&mut self) {
+        let start_len = self.stack.len();
+        while let Some(token) = self.tokens.next() {
+            if token.0 == TokenKind::RPar { break; }
+            self.parse_expr(token);
+        } 
+        self.state = State::PostParamFunctionExpr;
+        // Take everything EXCEPT the function's identifier off the stack
+        let mut params = Vec::<Box<Expr>>::new();
+        while self.stack.len() != start_len {
+            // This code will only take off as many as we put on, so .unwrap() is appropriate
+            let expr = self.stack.pop().unwrap();
+            params.push(Box::new(expr));
+        }
+        self.stack.push(Expr::ParametersExpr(params));
+    }
+
     fn expr_parens(&mut self) {
         while let Some(token) = self.tokens.next() {
             if token.0 == TokenKind::RPar { break; }
@@ -183,6 +265,40 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         // reduced to just 1 Expr then there will be an undetected parse error...
         // TODO: Fix that ^^^^^^^^
         self.stack.push(Expr::ParensExpr(Box::new(expr)));
+    }
+
+    fn expr_block(&mut self) {
+        // Effectively hi-jacking the rest of the parser, taking things off the tree and sticking them
+        // into the block expression
+        let mut len = self.tree.len();
+        let mut block = Vec::<Box<Expr>>::new();
+        let original_stack: Vec<Expr> = self.stack.drain(0..).collect();
+        let original_state = self.state.clone();
+        while let Some(token) = self.tokens.next() {
+            if token.0 == TokenKind::RCurl { break; }
+            self.parse_expr(token);
+            // When something was added to the tree
+            if self.tree.len() > len {
+                // Yank and shove in the BlockExpr
+                let expr = self.tree.pop().unwrap();
+                block.push(Box::new(expr));
+                len = self.tree.len();
+            }
+        }
+        // Push the original stack
+        self.stack = original_stack;
+        self.stack.push(Expr::BlockExpr(block));
+        self.state = original_state;
+        if self.state == State::PostParamFunctionExpr {
+            match self.try_reduce() {
+                Some(_) => self.state = State::Empty,
+                None => {
+                    eprintln!("There was an error reducing the stack!");
+                    dbg!(&self.stack);
+                    dbg!(&self.tree);
+                }
+            }
+        }
     }
 
     fn expr_binaryop(&mut self, operator: BinaryOperator) {

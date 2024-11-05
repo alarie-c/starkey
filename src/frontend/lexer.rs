@@ -169,5 +169,6 @@ fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
     map.insert("if", TokenKind::If);
     map.insert("elif", TokenKind::Elif);
     map.insert("else", TokenKind::Else);
+    map.insert("def", TokenKind::Def);
     map
 }

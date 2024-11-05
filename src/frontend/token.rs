@@ -67,6 +67,7 @@ pub enum TokenKind<'a> {
     If,
     Else,
     Elif,
+    Def,
 
     // Other
     Newline,

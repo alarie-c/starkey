@@ -5,14 +5,20 @@ pub enum Expr {
     Float(f32),
     Str(String),
     Ident(String),
+    Parameter(Box<Expr>, Box<Expr>),
 
     QualifiedIdent(Box<Expr>, Box<Expr>),
     
     ParensExpr(Box<Expr>),
+    BlockExpr(Vec<Box<Expr>>),
 
     BinaryExpr(Box<Expr>, Box<Expr>, BinaryOperator),
 
     PrintExpr(Box<Expr>),
+
+    /// Ident, Params, Return, Body
+    FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
+    ParametersExpr(Vec<Box<Expr>>),
     
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
