@@ -11,6 +11,8 @@ pub enum Expr {
     ParensExpr(Box<Expr>),
 
     BinaryExpr(Box<Expr>, Box<Expr>, BinaryOperator),
+
+    PrintExpr(Box<Expr>),
     
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),

@@ -36,6 +36,7 @@ pub enum TokenKind<'a> {
     SemiColon,
     Dot,
     DotDot,
+    Print,
 
     // Comparison
     Equal,

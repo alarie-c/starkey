@@ -8,6 +8,7 @@ use super::{
 #[derive(Debug, PartialEq, Eq)]
 enum State {
     Empty,
+    PrintExpr,
     UntypedVarExpr,
     UntypedConstExpr,
     TypedVarExpr,
@@ -46,12 +47,24 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         dbg!(&self.tree);
 
         match self.state {
+            State::PrintExpr => self.reduce_print_expr(),
             State::UntypedVarExpr => self.reduce_var_expr(false, false),
             State::UntypedConstExpr => self.reduce_var_expr(false, true),
             State::TypedVarExpr => self.reduce_var_expr(true, false),
             State::TypedConstExpr => self.reduce_var_expr(true, true),
             State::MutationExpr => self.reduce_mutation(),
             _ => panic!("Unexpected state {:?}", self.state),
+        }
+    }
+
+    fn reduce_print_expr(&mut self) -> Option<()> {
+        if self.stack.len() >= 1 {
+            let expr = self.stack.pop().unwrap();
+            self.tree
+                .push(Expr::PrintExpr(Box::new(expr)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -120,6 +133,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Arrow => self.state = State::MutationExpr,
 
             TokenKind::LPar => self.expr_parens(),
+            TokenKind::Print => self.state = State::PrintExpr,
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
             TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
