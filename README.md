@@ -18,3 +18,6 @@ A data-science programming langauge made to make the manipulation and handling o
 > In essence, it has the stack and tree. The stack only ever has a single statement worth of expressions on it. As soon as the parser hits a semicolor (or similar terminating token) it tries to reduce based on the current state. The state is set as it encounters tokens. For example, when it reaches a `var` token, the state is set to `"VAR EXPR"` which is then used to turn an identifier and any other expr into a `VarExpr` which is pushed to the tree.
 
 > The only problem I forsee with this is that everything needs to be parsed into a single thing. Any kind of ambiguity has to be encapsulated in some way. For example, function parameters have to be a single thing, because I'm not about to reduce an ambiguous number of identifiers into what's a function name, parameter, type annotation, return type, etc.
+
+# 11/5/24
+> This parser is working really well so far. There are a couple parts of the code that are super duper sketchy that I need to work out and handle a little better, but other than that, everything works as intended and is scalable/modular exactly the way I had planned.
