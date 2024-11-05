@@ -69,8 +69,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     }
 
     fn reduce_var_expr(&mut self, typed: bool, constant: bool) -> Option<()> {
+        // Variable assignment, no type annotation
         if self.stack.len() == 2 && !typed {
-            // Variable assignment, no type annotation
             let value = self.stack.pop().unwrap();
             let name = self.stack.pop().unwrap();
             if constant {
@@ -81,8 +81,9 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                     .push(Expr::VariableExpr(Box::new(name), None, Box::new(value)));
             }
             Some(())
+
+        // Variable assignment, with type annotation
         } else if self.stack.len() == 3 && typed {
-            // Variable assignment, with type annotation
             let value = self.stack.pop().unwrap();
             let typ = self.stack.pop().unwrap();
             let name = self.stack.pop().unwrap();
@@ -100,6 +101,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 ));
             }
             Some(())
+
+        // Something is wrong with the organization of the stack
         } else {
             None
         }
@@ -116,6 +119,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Arrow => self.state = State::MutationExpr,
 
             TokenKind::Equal => match self.state {
+                // Make sure equal is being used in the correct state here
                 State::UntypedVarExpr
                 | State::TypedVarExpr
                 | State::TypedConstExpr
@@ -139,7 +143,6 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                     dbg!(&self.tree);
                 }
             },
-            TokenKind::Equal => {}
             _ => panic!("Unexpected token! {:?}", token),
         }
     }
