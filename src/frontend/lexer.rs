@@ -37,6 +37,7 @@ impl<'a> Lexer<'a> {
                 [b'!', b'=', ..] => self.add_token2(TokenKind::BangEqual, self.pos, 2),
                 [b'<', b'=', ..] => self.add_token2(TokenKind::LessEqual, self.pos, 2),
                 [b'>', b'=', ..] => self.add_token2(TokenKind::MoreEqual, self.pos, 2),
+                [b'.', b'.', ..] => self.add_token2(TokenKind::DotDot, self.pos, 2),
                 [b'=', ..] => self.add_token(TokenKind::Equal, self.pos, 1),
                 [b'-', ..] => self.add_token(TokenKind::Minus, self.pos, 1),
                 [b'+', ..] => self.add_token(TokenKind::Plus, self.pos, 1),

@@ -27,6 +27,7 @@ pub enum TokenKind<'a> {
     ColonColon,
     SemiColon,
     Dot,
+    DotDot,
 
     // Comparison
     Equal,
