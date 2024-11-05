@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use super::{
-    expr::Expr,
+    expr::{BinaryOperator, Expr},
     token::{Token, TokenKind},
 };
 
@@ -114,9 +114,19 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Ident(i) => self.expr_ident(i),
             TokenKind::Dot => self.expr_qualified_ident(),
             TokenKind::EOF => println!("ENDING"),
+
             TokenKind::Var => self.state = State::UntypedVarExpr,
             TokenKind::Const => self.state = State::UntypedConstExpr,
             TokenKind::Arrow => self.state = State::MutationExpr,
+
+            TokenKind::LPar => self.expr_parens(),
+
+            TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
+            TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
+            TokenKind::Star => self.expr_binaryop(BinaryOperator::Multiply),
+            TokenKind::Slash => self.expr_binaryop(BinaryOperator::Divide),
+            TokenKind::Modulo => self.expr_binaryop(BinaryOperator::Modulo),
+            TokenKind::Exponent => self.expr_binaryop(BinaryOperator::Exponent),
 
             TokenKind::Equal => match self.state {
                 // Make sure equal is being used in the correct state here
@@ -146,6 +156,37 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             _ => panic!("Unexpected token! {:?}", token),
         }
     }
+
+    fn expr_parens(&mut self) {
+        while let Some(token) = self.tokens.next() {
+            if token.0 == TokenKind::RPar { break; }
+            self.parse_expr(token);
+        } 
+        let expr = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid expression for ParensExpr");
+        });
+        // This will only push the last thing on the stack!!! If something went wrong and it wasn't
+        // reduced to just 1 Expr then there will be an undetected parse error...
+        // TODO: Fix that ^^^^^^^^
+        self.stack.push(Expr::ParensExpr(Box::new(expr)));
+    }
+
+    fn expr_binaryop(&mut self, operator: BinaryOperator) {
+        let left = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid LHS expression for BinOp");
+        });
+
+        if let Some(token) = self.tokens.next() {
+            self.parse_expr(token);
+            let right = self.stack.pop().unwrap_or_else(|| {
+                panic!("Expected a valid RHS expression for BinOp");
+            });
+            self.stack
+                .push(Expr::BinaryExpr(Box::new(left), Box::new(right), operator));
+        } else {
+            panic!("No RHS expression for BinOp")
+        }
+    } 
 
     fn expr_qualified_ident(&mut self) {
         let left = self.stack.pop().unwrap_or_else(|| {

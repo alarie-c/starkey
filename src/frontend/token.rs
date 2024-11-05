@@ -21,6 +21,14 @@ pub struct TokenSpan(pub usize, pub usize);
 /// in its variant's field (Str, Number, Ident) respectively
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind<'a> {
+    // Grouping
+    LPar,
+    RPar,
+    LBrac,
+    RBrac,
+    LCurl,
+    RCurl,
+    
     // Operators
     Arrow,
     Colon,

@@ -51,6 +51,12 @@ impl<'a> Lexer<'a> {
                 [b'>', ..] => self.add_token(TokenKind::More, self.pos, 1),
                 [b'!', ..] => self.add_token(TokenKind::Bang, self.pos, 1),
                 [b'.', ..] => self.add_token(TokenKind::Dot, self.pos, 1),
+                [b'(', ..] => self.add_token(TokenKind::LPar, self.pos, 1),
+                [b')', ..] => self.add_token(TokenKind::RPar, self.pos, 1),
+                [b'[', ..] => self.add_token(TokenKind::LBrac, self.pos, 1),
+                [b']', ..] => self.add_token(TokenKind::RBrac, self.pos, 1),
+                [b'{', ..] => self.add_token(TokenKind::LCurl, self.pos, 1),
+                [b'}', ..] => self.add_token(TokenKind::RCurl, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();

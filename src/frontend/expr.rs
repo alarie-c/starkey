@@ -8,9 +8,21 @@ pub enum Expr {
 
     QualifiedIdent(Box<Expr>, Box<Expr>),
     
-    BinaryExpr(Box<Expr>, Box<Expr>, char),
+    ParensExpr(Box<Expr>),
+
+    BinaryExpr(Box<Expr>, Box<Expr>, BinaryOperator),
     
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     MutateExpr(Box<Expr>, Box<Expr>),
+}
+
+#[derive(Debug)]
+pub enum BinaryOperator {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulo,
+    Exponent,
 }
