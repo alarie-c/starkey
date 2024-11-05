@@ -37,6 +37,7 @@ pub enum TokenKind<'a> {
     Dot,
     DotDot,
     Print,
+    Comma,
 
     // Comparison
     Equal,

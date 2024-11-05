@@ -1,4 +1,1 @@
-def bytes_to_string(bytes: int): int {
-    var x = 5;
-    const y = 10;
-}
+var x = bytes_to_string(5, other_function(5, 10, 3.14));

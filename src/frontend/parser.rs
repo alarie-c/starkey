@@ -16,6 +16,7 @@ enum State {
     TypedVarExpr,
     TypedConstExpr,
     MutationExpr,
+    FunctionCallArgs,
 }
 
 #[derive(Debug)]
@@ -56,6 +57,16 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             State::TypedConstExpr => self.reduce_var_expr(true, true),
             State::MutationExpr => self.reduce_mutation(),
             State::PostParamFunctionExpr => self.reduce_function_expr(),
+            State::Empty => {
+                match self.stack.last() {
+                    Some(Expr::FunctionCall(_, _)) => {
+                        let fn_call = self.stack.pop().unwrap();
+                        self.tree.push(fn_call);
+                        Some(())
+                    }
+                    _ => panic!("Unexpected state {:?}", self.state),
+                }
+            }
             _ => panic!("Unexpected state {:?}", self.state),
         }
     }
@@ -161,7 +172,15 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::LPar => {
                 match self.state {
                     State::PreParamFunctionExpr => self.expr_parameters(),
-                    _ => self.expr_parens(),
+                    _ => {
+                        match self.stack.last() {
+                            Some(Expr::Ident(_)) => {
+                                self.expr_arguments();
+                                self.expr_function_call();
+                            }
+                            _ => self.expr_parens(),
+                        }
+                    }
                 }
             }
 
@@ -211,6 +230,43 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             },
             _ => panic!("Unexpected token! {:?}", token),
         }
+    }
+
+    fn expr_function_call(&mut self) {
+        let args = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid params for function call");
+        });
+        let ident = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid identifier for function call");
+        });
+        self.stack.push(Expr::FunctionCall(Box::new(ident), Box::new(args)));
+    }
+
+    fn expr_arguments(&mut self) {
+        let mut args = Vec::<Box<Expr>>::new();
+        while let Some(token) = self.tokens.next() {
+            dbg!(&token);
+            dbg!(&self.stack);
+            match token.0 {
+                TokenKind::RPar => {
+                    if !args.is_empty() {
+                        let expr = self.stack.pop().unwrap_or_else(|| {
+                            panic!("Expected a valid expr for parameter");
+                        });
+                        args.push(Box::new(expr));
+                    }
+                    break;
+                },
+                TokenKind::Comma => {
+                    let expr = self.stack.pop().unwrap_or_else(|| {
+                        panic!("Expected a valid expr for parameter");
+                    });
+                    args.push(Box::new(expr));
+                }
+                _ => self.parse_expr(token),
+            }
+        } 
+        self.stack.push(Expr::FunctionArgs(args));
     }
 
     fn expr_parameter(&mut self) {

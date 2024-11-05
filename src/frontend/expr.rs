@@ -16,6 +16,10 @@ pub enum Expr {
 
     PrintExpr(Box<Expr>),
 
+    // Ident, Arguments
+    FunctionCall(Box<Expr>, Box<Expr>),
+    FunctionArgs(Vec<Box<Expr>>),
+
     /// Ident, Params, Return, Body
     FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ParametersExpr(Vec<Box<Expr>>),
