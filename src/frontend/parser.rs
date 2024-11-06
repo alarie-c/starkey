@@ -8,6 +8,7 @@ use super::{
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum State {
     Empty,
+    ReturnExpr,
     PreParamFunctionExpr,
     PostParamFunctionExpr,
     PrintExpr,
@@ -50,6 +51,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         dbg!(&self.tree);
 
         match self.state {
+            State::ReturnExpr => self.reduce_return_expr(),
             State::PrintExpr => self.reduce_print_expr(),
             State::ImportExpr => self.reduce_import_expr(),
             State::UntypedVarExpr => self.reduce_var_expr(false, false),
@@ -117,6 +119,16 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         if self.stack.len() >= 1 {
             let expr = self.stack.pop().unwrap();
             self.tree.push(Expr::PrintExpr(Box::new(expr)));
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    fn reduce_return_expr(&mut self) -> Option<()> {
+        if self.stack.len() >= 1 {
+            let expr = self.stack.pop().unwrap();
+            self.tree.push(Expr::ReturnExpr(Box::new(expr)));
             Some(())
         } else {
             None
@@ -214,6 +226,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             },
 
             TokenKind::Print => self.state = State::PrintExpr,
+            TokenKind::Return => self.state = State::ReturnExpr,
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
             TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
@@ -381,25 +394,6 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         self.state = State::PostParamFunctionExpr;
     }
 
-    // fn expr_parameters(&mut self) {
-    //     let start_len = self.stack.len();
-    //     while let Some(token) = self.tokens.next() {
-    //         if token.0 == TokenKind::RPar {
-    //             break;
-    //         }
-    //         self.parse_expr(token);
-    //     }
-    //     self.state = State::PostParamFunctionExpr;
-    //     // Take everything EXCEPT the function's identifier off the stack
-    //     let mut params = Vec::<Box<Expr>>::new();
-    //     while self.stack.len() != start_len {
-    //         // This code will only take off as many as we put on, so .unwrap() is appropriate
-    //         let expr = self.stack.pop().unwrap();
-    //         params.push(Box::new(expr));
-    //     }
-    //     self.stack.push(Expr::ParametersExpr(params));
-    // }
-
     fn expr_parens(&mut self) {
         while let Some(token) = self.tokens.next() {
             if token.0 == TokenKind::RPar {
@@ -459,6 +453,14 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
         if let Some(token) = self.tokens.next() {
             self.parse_expr(token);
+            // Make sure we keep parsing just in case an identifier is qualified
+            while let Some(token) = self.tokens.peek() {
+                if token.0 != TokenKind::Dot {
+                    break;
+                }
+                let token = self.tokens.next().unwrap();
+                self.parse_expr(token);
+            }
             let right = self.stack.pop().unwrap_or_else(|| {
                 panic!("Expected a valid RHS expression for BinOp");
             });

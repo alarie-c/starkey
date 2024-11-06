@@ -171,6 +171,7 @@ fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
     map.insert("elif", TokenKind::Elif);
     map.insert("else", TokenKind::Else);
     map.insert("def", TokenKind::Def);
+    map.insert("return", TokenKind::Return);
     map.insert("from", TokenKind::From);
     map.insert("import", TokenKind::Import);
     map.insert("is", TokenKind::Is);

@@ -24,6 +24,7 @@ pub enum Expr {
     // Ident, Arguments
     FunctionCall(Box<Expr>, Box<Expr>),
     FunctionArgs(Vec<Box<Expr>>),
+    ReturnExpr(Box<Expr>),
 
     /// Ident, Params, Return, Body
     FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),

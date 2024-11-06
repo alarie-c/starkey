@@ -74,6 +74,7 @@ pub enum TokenKind<'a> {
     Is,
     Struct,
     Enum,
+    Return,
 
     // Other
     Newline,
