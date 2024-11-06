@@ -6,15 +6,20 @@ pub enum Expr {
     Str(String),
     Ident(String),
     Parameter(Box<Expr>, Box<Expr>),
+    Wildcard,
 
     QualifiedIdent(Box<Expr>, Box<Expr>),
-    
+
     ParensExpr(Box<Expr>),
     BlockExpr(Vec<Box<Expr>>),
 
     BinaryExpr(Box<Expr>, Box<Expr>, BinaryOperator),
 
     PrintExpr(Box<Expr>),
+
+    /// from `Package` import `Vec<Symbols>`
+    ImportExpr(Box<Expr>, Box<Expr>),
+    ImportArgs(Vec<Box<Expr>>),
 
     // Ident, Arguments
     FunctionCall(Box<Expr>, Box<Expr>),
@@ -23,7 +28,7 @@ pub enum Expr {
     /// Ident, Params, Return, Body
     FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ParametersExpr(Vec<Box<Expr>>),
-    
+
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     MutateExpr(Box<Expr>, Box<Expr>),

@@ -16,7 +16,7 @@ enum State {
     TypedVarExpr,
     TypedConstExpr,
     MutationExpr,
-    FunctionCallArgs,
+    ImportExpr,
 }
 
 #[derive(Debug)]
@@ -51,23 +51,34 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
         match self.state {
             State::PrintExpr => self.reduce_print_expr(),
+            State::ImportExpr => self.reduce_import_expr(),
             State::UntypedVarExpr => self.reduce_var_expr(false, false),
             State::UntypedConstExpr => self.reduce_var_expr(false, true),
             State::TypedVarExpr => self.reduce_var_expr(true, false),
             State::TypedConstExpr => self.reduce_var_expr(true, true),
             State::MutationExpr => self.reduce_mutation(),
             State::PostParamFunctionExpr => self.reduce_function_expr(),
-            State::Empty => {
-                match self.stack.last() {
-                    Some(Expr::FunctionCall(_, _)) => {
-                        let fn_call = self.stack.pop().unwrap();
-                        self.tree.push(fn_call);
-                        Some(())
-                    }
-                    _ => panic!("Unexpected state {:?}", self.state),
+            State::Empty => match self.stack.last() {
+                Some(Expr::FunctionCall(_, _)) => {
+                    let fn_call = self.stack.pop().unwrap();
+                    self.tree.push(fn_call);
+                    Some(())
                 }
-            }
+                _ => panic!("Unexpected state {:?}", self.state),
+            },
             _ => panic!("Unexpected state {:?}", self.state),
+        }
+    }
+
+    fn reduce_import_expr(&mut self) -> Option<()> {
+        if self.stack.len() == 2 {
+            let args = self.stack.pop().unwrap();
+            let package = self.stack.pop().unwrap();
+            self.tree
+                .push(Expr::ImportExpr(Box::new(package), Box::new(args)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -77,7 +88,12 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             let block = self.stack.pop().unwrap();
             let params = self.stack.pop().unwrap();
             let ident = self.stack.pop().unwrap();
-            self.tree.push(Expr::FunctionExpr(Box::new(ident), Box::new(params), None, Box::new(block)));
+            self.tree.push(Expr::FunctionExpr(
+                Box::new(ident),
+                Box::new(params),
+                None,
+                Box::new(block),
+            ));
             Some(())
         // Valid return annotation
         } else if self.stack.len() == 4 {
@@ -85,7 +101,12 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             let returns = self.stack.pop().unwrap();
             let params = self.stack.pop().unwrap();
             let ident = self.stack.pop().unwrap();
-            self.tree.push(Expr::FunctionExpr(Box::new(ident), Box::new(params), Some(Box::new(returns)), Box::new(block)));
+            self.tree.push(Expr::FunctionExpr(
+                Box::new(ident),
+                Box::new(params),
+                Some(Box::new(returns)),
+                Box::new(block),
+            ));
             Some(())
         } else {
             None
@@ -95,8 +116,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     fn reduce_print_expr(&mut self) -> Option<()> {
         if self.stack.len() >= 1 {
             let expr = self.stack.pop().unwrap();
-            self.tree
-                .push(Expr::PrintExpr(Box::new(expr)));
+            self.tree.push(Expr::PrintExpr(Box::new(expr)));
             Some(())
         } else {
             None
@@ -166,36 +186,41 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Var => self.state = State::UntypedVarExpr,
             TokenKind::Const => self.state = State::UntypedConstExpr,
             TokenKind::Def => self.state = State::PreParamFunctionExpr,
+            TokenKind::From => self.state = State::ImportExpr,
+            TokenKind::Import => {
+                if self.state != State::ImportExpr {
+                    panic!("Unexpected `import` in state: {:?}", self.state)
+                } else {
+                    self.expr_import_args();
+                }
+            }
 
             TokenKind::Arrow => self.state = State::MutationExpr,
 
-            TokenKind::LPar => {
-                match self.state {
-                    State::PreParamFunctionExpr => self.expr_parameters(),
-                    _ => {
-                        match self.stack.last() {
-                            Some(Expr::Ident(_)) => {
-                                self.expr_arguments();
-                                self.expr_function_call();
-                            }
-                            _ => self.expr_parens(),
-                        }
+            TokenKind::LPar => match self.state {
+                State::PreParamFunctionExpr => self.expr_parameters(),
+                _ => match self.stack.last() {
+                    Some(Expr::Ident(_)) => {
+                        self.expr_arguments();
+                        self.expr_function_call();
                     }
-                }
-            }
+                    _ => self.expr_parens(),
+                },
+            },
 
-            TokenKind::LCurl => {
-                match self.state {
-                    State::PostParamFunctionExpr => self.expr_block(),
-                    _ => panic!("Unexpected `{{` in state: {:?}", self.state),
-                }
-            }
+            TokenKind::LCurl => match self.state {
+                State::PostParamFunctionExpr => self.expr_block(),
+                _ => panic!("Unexpected `{{` in state: {:?}", self.state),
+            },
 
             TokenKind::Print => self.state = State::PrintExpr,
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
             TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
-            TokenKind::Star => self.expr_binaryop(BinaryOperator::Multiply),
+            TokenKind::Star => match self.state {
+                State::ImportExpr => self.stack.push(Expr::Wildcard),
+                _ => self.expr_binaryop(BinaryOperator::Multiply),
+            },
             TokenKind::Slash => self.expr_binaryop(BinaryOperator::Divide),
             TokenKind::Modulo => self.expr_binaryop(BinaryOperator::Modulo),
             TokenKind::Exponent => self.expr_binaryop(BinaryOperator::Exponent),
@@ -215,7 +240,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                     State::UntypedVarExpr => self.state = State::TypedVarExpr,
                     State::UntypedConstExpr => self.state = State::TypedConstExpr,
                     State::PreParamFunctionExpr => self.expr_parameter(),
-                    State::PostParamFunctionExpr => {},
+                    State::PostParamFunctionExpr => {}
                     _ => panic!("Unexpected `:` in state: {:?}", self.state),
                 }
             }
@@ -232,6 +257,43 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         }
     }
 
+    fn expr_import_args(&mut self) {
+        let mut args = Vec::<Box<Expr>>::new();
+        while let Some(token) = self.tokens.next() {
+            dbg!(&self.stack);
+            dbg!(&args);
+            match token.0 {
+                TokenKind::SemiColon => {
+                    let expr = self.stack.pop().unwrap_or_else(|| {
+                        panic!("Expected a valid expr for import arg");
+                    });
+                    args.push(Box::new(expr));
+                    if args.is_empty() {
+                        panic!("Expected symbols to import from module!");
+                    }
+                    break;
+                }
+                TokenKind::Comma => {
+                    let expr = self.stack.pop().unwrap_or_else(|| {
+                        panic!("Expected a valid expr for import arg");
+                    });
+                    args.push(Box::new(expr));
+                }
+                _ => self.parse_expr(token),
+            }
+        }
+        self.stack.push(Expr::ImportArgs(args));
+
+        match self.try_reduce() {
+            Some(_) => self.state = State::Empty,
+            None => {
+                eprintln!("There was an error reducing the stack!");
+                dbg!(&self.stack);
+                dbg!(&self.tree);
+            }
+        }
+    }
+
     fn expr_function_call(&mut self) {
         let args = self.stack.pop().unwrap_or_else(|| {
             panic!("Expected a valid params for function call");
@@ -239,14 +301,13 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         let ident = self.stack.pop().unwrap_or_else(|| {
             panic!("Expected a valid identifier for function call");
         });
-        self.stack.push(Expr::FunctionCall(Box::new(ident), Box::new(args)));
+        self.stack
+            .push(Expr::FunctionCall(Box::new(ident), Box::new(args)));
     }
 
     fn expr_arguments(&mut self) {
         let mut args = Vec::<Box<Expr>>::new();
         while let Some(token) = self.tokens.next() {
-            dbg!(&token);
-            dbg!(&self.stack);
             match token.0 {
                 TokenKind::RPar => {
                     if !args.is_empty() {
@@ -256,7 +317,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                         args.push(Box::new(expr));
                     }
                     break;
-                },
+                }
                 TokenKind::Comma => {
                     let expr = self.stack.pop().unwrap_or_else(|| {
                         panic!("Expected a valid expr for parameter");
@@ -265,7 +326,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 }
                 _ => self.parse_expr(token),
             }
-        } 
+        }
         self.stack.push(Expr::FunctionArgs(args));
     }
 
@@ -278,7 +339,9 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             self.parse_expr(token);
             // Make sure we keep parsing just in case the identifier is qualified
             while let Some(token) = self.tokens.peek() {
-                if token.0 != TokenKind::Dot { break; }
+                if token.0 != TokenKind::Dot {
+                    break;
+                }
                 let token = self.tokens.next().unwrap();
                 self.parse_expr(token);
             }
@@ -291,29 +354,59 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             panic!("No RHS identifier for parameter")
         }
     }
-    
+
     fn expr_parameters(&mut self) {
-        let start_len = self.stack.len();
-        while let Some(token) = self.tokens.next() {
-            if token.0 == TokenKind::RPar { break; }
-            self.parse_expr(token);
-        } 
-        self.state = State::PostParamFunctionExpr;
-        // Take everything EXCEPT the function's identifier off the stack
         let mut params = Vec::<Box<Expr>>::new();
-        while self.stack.len() != start_len {
-            // This code will only take off as many as we put on, so .unwrap() is appropriate
-            let expr = self.stack.pop().unwrap();
-            params.push(Box::new(expr));
+        while let Some(token) = self.tokens.next() {
+            match token.0 {
+                TokenKind::RPar => {
+                    if !params.is_empty() {
+                        let expr = self.stack.pop().unwrap_or_else(|| {
+                            panic!("Expected a valid expr for parameter");
+                        });
+                        params.push(Box::new(expr));
+                    }
+                    break;
+                }
+                TokenKind::Comma => {
+                    let expr = self.stack.pop().unwrap_or_else(|| {
+                        panic!("Expected a valid expr for parameter");
+                    });
+                    params.push(Box::new(expr));
+                }
+                _ => self.parse_expr(token),
+            }
         }
-        self.stack.push(Expr::ParametersExpr(params));
+        self.stack.push(Expr::FunctionArgs(params));
+        self.state = State::PostParamFunctionExpr;
     }
+
+    // fn expr_parameters(&mut self) {
+    //     let start_len = self.stack.len();
+    //     while let Some(token) = self.tokens.next() {
+    //         if token.0 == TokenKind::RPar {
+    //             break;
+    //         }
+    //         self.parse_expr(token);
+    //     }
+    //     self.state = State::PostParamFunctionExpr;
+    //     // Take everything EXCEPT the function's identifier off the stack
+    //     let mut params = Vec::<Box<Expr>>::new();
+    //     while self.stack.len() != start_len {
+    //         // This code will only take off as many as we put on, so .unwrap() is appropriate
+    //         let expr = self.stack.pop().unwrap();
+    //         params.push(Box::new(expr));
+    //     }
+    //     self.stack.push(Expr::ParametersExpr(params));
+    // }
 
     fn expr_parens(&mut self) {
         while let Some(token) = self.tokens.next() {
-            if token.0 == TokenKind::RPar { break; }
+            if token.0 == TokenKind::RPar {
+                break;
+            }
             self.parse_expr(token);
-        } 
+        }
         let expr = self.stack.pop().unwrap_or_else(|| {
             panic!("Expected a valid expression for ParensExpr");
         });
@@ -331,7 +424,9 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         let original_stack: Vec<Expr> = self.stack.drain(0..).collect();
         let original_state = self.state.clone();
         while let Some(token) = self.tokens.next() {
-            if token.0 == TokenKind::RCurl { break; }
+            if token.0 == TokenKind::RCurl {
+                break;
+            }
             self.parse_expr(token);
             // When something was added to the tree
             if self.tree.len() > len {
@@ -372,7 +467,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         } else {
             panic!("No RHS expression for BinOp")
         }
-    } 
+    }
 
     fn expr_qualified_ident(&mut self) {
         let left = self.stack.pop().unwrap_or_else(|| {

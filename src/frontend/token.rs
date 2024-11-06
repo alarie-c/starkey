@@ -28,7 +28,7 @@ pub enum TokenKind<'a> {
     RBrac,
     LCurl,
     RCurl,
-    
+
     // Operators
     Arrow,
     Colon,
@@ -69,6 +69,11 @@ pub enum TokenKind<'a> {
     Else,
     Elif,
     Def,
+    From,
+    Import,
+    Is,
+    Struct,
+    Enum,
 
     // Other
     Newline,
