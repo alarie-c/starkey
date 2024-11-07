@@ -72,10 +72,11 @@ pub enum TokenKind<'a> {
     From,
     Import,
     Is,
-    Struct,
+    Class,
     Enum,
     Return,
     Flag,
+    Methods,
 
     // Other
     Newline,

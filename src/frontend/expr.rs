@@ -18,13 +18,13 @@ pub enum Expr {
     PrintExpr(Box<Expr>),
 
     /// Ident, Fields
-    StructExpr(Box<Expr>, Box<Expr>),
+    ClassExpr(Box<Expr>, Box<Expr>),
     
     /// Expects `Vec<Expr::Parameter>`
-    StructFields(Vec<Box<Expr>>),
+    ClassFields(Vec<Box<Expr>>),
 
-    /// Expects `Vec<Expr::FunctionExpr>`
-    StructDef(Vec<Box<Expr>>),
+    /// Expects Ident and `Expr::BlockExpr`
+    ClassMethods(Box<Expr>, Vec<Box<Expr>>),
 
     /// from `Package` import `Vec<Symbols>`
     ImportExpr(Box<Expr>, Box<Expr>),

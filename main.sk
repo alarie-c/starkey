@@ -1,6 +1,18 @@
 from file import file;
 
-struct Data {
+class Data {
     file: File,
     content: str,
+}
+
+methods Data {
+    def example(x: int): str {
+        const x = 5 + 5;
+        return x;
+    }
+
+    def hello(y: str, a: int) {
+        var x = 10 + 5 * example.hello;
+        return x;
+    }
 }
