@@ -20,6 +20,7 @@ pub enum Expr {
     /// from `Package` import `Vec<Symbols>`
     ImportExpr(Box<Expr>, Box<Expr>),
     ImportArgs(Vec<Box<Expr>>),
+    FlagExpr(Box<Expr>),
 
     // Ident, Arguments
     FunctionCall(Box<Expr>, Box<Expr>),

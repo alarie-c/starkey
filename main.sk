@@ -1,1 +1,2 @@
-return (x + 10) / (3.14 + math.pi);
+flag ignore_dead_code;
+from file import File, readf;

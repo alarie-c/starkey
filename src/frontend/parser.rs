@@ -18,6 +18,7 @@ enum State {
     TypedConstExpr,
     MutationExpr,
     ImportExpr,
+    FlagExpr,
 }
 
 #[derive(Debug)]
@@ -51,6 +52,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         dbg!(&self.tree);
 
         match self.state {
+            State::FlagExpr => self.reduce_flag_expr(),
             State::ReturnExpr => self.reduce_return_expr(),
             State::PrintExpr => self.reduce_print_expr(),
             State::ImportExpr => self.reduce_import_expr(),
@@ -69,6 +71,16 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 _ => panic!("Unexpected state {:?}", self.state),
             },
             _ => panic!("Unexpected state {:?}", self.state),
+        }
+    }
+
+    fn reduce_flag_expr(&mut self) -> Option<()> {
+        if self.stack.len() == 1 {
+            let flag = self.stack.pop().unwrap();
+            self.tree.push(Expr::FlagExpr(Box::new(flag)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -227,6 +239,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
             TokenKind::Print => self.state = State::PrintExpr,
             TokenKind::Return => self.state = State::ReturnExpr,
+            TokenKind::Flag => self.state = State::FlagExpr,
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
             TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
