@@ -12,6 +12,16 @@ methods Data {
     }
 
     def hello(y: str, a: int) {
+        class Test {
+            field: type,
+        }
+
+        methods Test {
+            def test_fn() {
+                $ "Hello, world!";
+            }
+        }
+        
         var x = 10 + 5 * example.hello;
         return x;
     }

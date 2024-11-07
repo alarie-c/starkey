@@ -229,6 +229,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         match token.0 {
             TokenKind::Number(n) => self.expr_number(n),
             TokenKind::Ident(i) => self.expr_ident(i),
+            TokenKind::Str(s) => self.expr_str(s),
             TokenKind::Dot => self.expr_qualified_ident(),
             TokenKind::EOF => println!("ENDING"),
 
@@ -591,6 +592,10 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
     fn expr_ident(&mut self, name: &'a str) {
         self.stack.push(Expr::Ident(name.to_string()));
+    }
+
+    fn expr_str(&mut self, string: &'a str) {
+        self.stack.push(Expr::Str(string.to_string()));
     }
 
     fn expr_number(&mut self, number: &'a str) {
