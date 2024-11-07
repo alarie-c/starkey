@@ -1,2 +1,6 @@
-flag ignore_dead_code;
-from file import File, readf;
+from file import file;
+
+struct Data {
+    file: File,
+    content: str,
+}

@@ -9,6 +9,7 @@ use super::{
 enum State {
     Empty,
     ReturnExpr,
+    StructExpr,
     PreParamFunctionExpr,
     PostParamFunctionExpr,
     PrintExpr,
@@ -45,13 +46,14 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         }
     }
 
-    fn try_reduce(&mut self) -> Option<()> {
+    fn reduce(&mut self) -> Option<()> {
         println!("Attempting to reduce the stack");
         println!("State = {:?}", self.state);
         dbg!(&self.stack);
         dbg!(&self.tree);
 
         match self.state {
+            State::StructExpr => self.reduce_struct_expr(),
             State::FlagExpr => self.reduce_flag_expr(),
             State::ReturnExpr => self.reduce_return_expr(),
             State::PrintExpr => self.reduce_print_expr(),
@@ -71,6 +73,17 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 _ => panic!("Unexpected state {:?}", self.state),
             },
             _ => panic!("Unexpected state {:?}", self.state),
+        }
+    }
+
+    fn reduce_struct_expr(&mut self) -> Option<()> {
+        if self.stack.len() == 2 {
+            let fields = self.stack.pop().unwrap();
+            let ident = self.stack.pop().unwrap();
+            self.tree.push(Expr::StructExpr(Box::new(ident), Box::new(fields)));
+            Some(())
+        } else {
+            None
         }
     }
 
@@ -200,6 +213,17 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         }
     }
 
+    fn try_reduce(&mut self) {
+        match self.reduce() {
+            Some(_) => self.state = State::Empty,
+            None => {
+                eprintln!("There was an error reducing the stack!");
+                dbg!(&self.stack);
+                dbg!(&self.tree);
+            }
+        };
+    }
+
     fn parse_expr(&mut self, token: &'a Token) {
         match token.0 {
             TokenKind::Number(n) => self.expr_number(n),
@@ -211,6 +235,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Const => self.state = State::UntypedConstExpr,
             TokenKind::Def => self.state = State::PreParamFunctionExpr,
             TokenKind::From => self.state = State::ImportExpr,
+
+            TokenKind::Struct => self.state = State::StructExpr,
             TokenKind::Import => {
                 if self.state != State::ImportExpr {
                     panic!("Unexpected `import` in state: {:?}", self.state)
@@ -234,6 +260,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
             TokenKind::LCurl => match self.state {
                 State::PostParamFunctionExpr => self.expr_block(),
+                State::StructExpr => self.expr_struct_expr(),
                 _ => panic!("Unexpected `{{` in state: {:?}", self.state),
             },
 
@@ -265,22 +292,47 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 match self.state {
                     State::UntypedVarExpr => self.state = State::TypedVarExpr,
                     State::UntypedConstExpr => self.state = State::TypedConstExpr,
-                    State::PreParamFunctionExpr => self.expr_parameter(),
+                    State::PreParamFunctionExpr | State::StructExpr => self.expr_parameter(),
                     State::PostParamFunctionExpr => {}
                     _ => panic!("Unexpected `:` in state: {:?}", self.state),
                 }
             }
 
-            TokenKind::SemiColon => match self.try_reduce() {
-                Some(_) => self.state = State::Empty,
-                None => {
-                    eprintln!("There was an error reducing the stack!");
-                    dbg!(&self.stack);
-                    dbg!(&self.tree);
-                }
-            },
+            TokenKind::SemiColon => self.try_reduce(),
             _ => panic!("Unexpected token! {:?}", token),
         }
+    }
+
+    fn expr_struct_expr(&mut self) {
+        let mut fields = Vec::<Box<Expr>>::new();
+        let mut last_token_was_comma = true;
+        while let Some(token) = self.tokens.next() {
+            match token.0 {
+                TokenKind::RCurl => {
+                    if !last_token_was_comma {
+                        let expr = self.stack.pop().unwrap_or_else(|| {
+                            panic!("Expected a valid expr for struct fields");
+                        });
+                        fields.push(Box::new(expr));
+                    }
+                    break;
+                }
+                TokenKind::Comma => {
+                    dbg!(&self.stack);
+                    last_token_was_comma = true;
+                    let expr = self.stack.pop().unwrap_or_else(|| {
+                        panic!("Expected a valid expr for struct field");
+                    });
+                    fields.push(Box::new(expr));
+                }
+                _ => {
+                    self.parse_expr(token);
+                    last_token_was_comma = false;
+                }
+            }
+        }
+        self.stack.push(Expr::StructFields(fields));
+        self.try_reduce();
     }
 
     fn expr_import_args(&mut self) {
@@ -309,15 +361,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             }
         }
         self.stack.push(Expr::ImportArgs(args));
-
-        match self.try_reduce() {
-            Some(_) => self.state = State::Empty,
-            None => {
-                eprintln!("There was an error reducing the stack!");
-                dbg!(&self.stack);
-                dbg!(&self.tree);
-            }
-        }
+        self.try_reduce();
     }
 
     fn expr_function_call(&mut self) {
@@ -448,14 +492,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         self.stack.push(Expr::BlockExpr(block));
         self.state = original_state;
         if self.state == State::PostParamFunctionExpr {
-            match self.try_reduce() {
-                Some(_) => self.state = State::Empty,
-                None => {
-                    eprintln!("There was an error reducing the stack!");
-                    dbg!(&self.stack);
-                    dbg!(&self.tree);
-                }
-            }
+            self.try_reduce();
         }
     }
 

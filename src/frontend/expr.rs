@@ -17,19 +17,27 @@ pub enum Expr {
 
     PrintExpr(Box<Expr>),
 
+    /// Ident, Fields
+    StructExpr(Box<Expr>, Box<Expr>),
+    
+    /// Expects `Vec<Expr::Parameter>`
+    StructFields(Vec<Box<Expr>>),
+
+    /// Expects `Vec<Expr::FunctionExpr>`
+    StructDef(Vec<Box<Expr>>),
+
     /// from `Package` import `Vec<Symbols>`
     ImportExpr(Box<Expr>, Box<Expr>),
     ImportArgs(Vec<Box<Expr>>),
     FlagExpr(Box<Expr>),
 
-    // Ident, Arguments
+    /// Ident, Params, Return, Body
+    FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
+    /// Ident, Arguments
     FunctionCall(Box<Expr>, Box<Expr>),
     FunctionArgs(Vec<Box<Expr>>),
     ReturnExpr(Box<Expr>),
 
-    /// Ident, Params, Return, Body
-    FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
-    ParametersExpr(Vec<Box<Expr>>),
 
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
