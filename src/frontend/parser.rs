@@ -1,12 +1,17 @@
 use std::iter::Peekable;
 
+use crate::errors::{
+    error::{ErrorClass, ErrorKind, Errors},
+    recovery,
+};
+
 use super::{
     expr::{BinaryOperator, Expr},
     token::{Token, TokenKind},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum State {
+pub enum State {
     Empty,
     ReturnExpr,
     ClassExpr,
@@ -25,25 +30,38 @@ enum State {
 
 #[derive(Debug)]
 pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
+    errors: &'a mut Errors,
     tokens: Peekable<Iter>,
     stack: Vec<Expr>,
     tree: Vec<Expr>,
     state: State,
+    phrase_start: usize,
+    phrase_end: usize,
 }
 
 impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
-    pub fn new(tokens: Iter) -> Self {
+    pub fn new(errors: &'a mut Errors, tokens: Iter) -> Self {
         Self {
+            errors,
             tokens: tokens.peekable(),
             stack: Vec::new(),
             tree: Vec::new(),
             state: State::Empty,
+            phrase_start: 0,
+            phrase_end: 0,
         }
     }
 
     pub fn parse(&mut self) {
         while let Some(token) = self.tokens.next() {
             self.parse_expr(token);
+        }
+    }
+
+    fn push_recovery(&mut self, new_expr: Option<Expr>) {
+        match new_expr {
+            Some(e) => self.stack.push(e),
+            None => {}
         }
     }
 
@@ -81,7 +99,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         if self.stack.len() == 2 {
             let fields = self.stack.pop().unwrap();
             let ident = self.stack.pop().unwrap();
-            self.tree.push(Expr::ClassExpr(Box::new(ident), Box::new(fields)));
+            self.tree
+                .push(Expr::ClassExpr(Box::new(ident), Box::new(fields)));
             Some(())
         } else {
             None
@@ -226,6 +245,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     }
 
     fn parse_expr(&mut self, token: &'a Token) {
+        self.phrase_start = token.1 .0;
         match token.0 {
             TokenKind::Number(n) => self.expr_number(n),
             TokenKind::Ident(i) => self.expr_ident(i),
@@ -287,7 +307,17 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
                 | State::TypedVarExpr
                 | State::TypedConstExpr
                 | State::UntypedConstExpr => {}
-                _ => panic!("Unexpected `=` in state: {:?}", self.state),
+                _ => {
+                    let (new_expr, msg) =
+                        recovery::unexpected_token(self.stack.last(), token, &self.state);
+                    self.push_recovery(new_expr);
+                    self.errors.new(
+                        ErrorClass::Error,
+                        ErrorKind::ParseError(msg),
+                        self.phrase_start,
+                        token.1 .1,
+                    );
+                }
             },
 
             TokenKind::Colon => {
@@ -309,20 +339,19 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     fn expr_class_methods(&mut self) {
         let mut len = self.tree.len();
         let mut methods = Vec::<Box<Expr>>::new();
-        let ident = self.stack.pop().unwrap_or_else(|| {
-            panic!("Missing identifier for def block!")
-        });
+        let ident = self
+            .stack
+            .pop()
+            .unwrap_or_else(|| panic!("Missing identifier for def block!"));
         while let Some(token) = self.tokens.next() {
             match token.0 {
                 TokenKind::Def => self.state = State::PreParamFunctionExpr,
                 TokenKind::Ident(i) => self.expr_ident(i),
-                TokenKind::Colon => {
-                    match self.state {
-                        State::PreParamFunctionExpr => self.expr_parameter(),
-                        State::PostParamFunctionExpr => {}
-                        _ => panic!("Unexpected `:` in state: {:?}", self.state),
-                    }
-                }
+                TokenKind::Colon => match self.state {
+                    State::PreParamFunctionExpr => self.expr_parameter(),
+                    State::PostParamFunctionExpr => {}
+                    _ => panic!("Unexpected `:` in state: {:?}", self.state),
+                },
                 TokenKind::LPar => match self.state {
                     State::PreParamFunctionExpr => self.expr_parameters(),
                     _ => panic!("Unexpected '(' in class def block"),
@@ -544,7 +573,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         self.state = original_state;
         match self.state {
             State::PostParamFunctionExpr => self.try_reduce(),
-            _ => {},
+            _ => {}
         }
     }
 

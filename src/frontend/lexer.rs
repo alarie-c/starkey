@@ -178,6 +178,7 @@ fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
     map.insert("is", TokenKind::Is);
     map.insert("flag", TokenKind::Flag);
     map.insert("class", TokenKind::Class);
+    map.insert("enum", TokenKind::Enum);
     map.insert("methods", TokenKind::Methods);
     map.insert("this", TokenKind::This);
     map

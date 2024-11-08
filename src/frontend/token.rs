@@ -4,7 +4,7 @@ pub struct Token<'a>(pub TokenKind<'a>, pub TokenSpan);
 
 impl<'a> Token<'a> {
     pub fn new(kind: TokenKind<'a>, begin: usize, end: usize) -> Self {
-        Self(kind, TokenSpan(begin, end - 1))
+        Self(kind, TokenSpan(begin + 1, end - 1))
     }
 }
 
