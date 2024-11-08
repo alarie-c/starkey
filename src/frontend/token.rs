@@ -6,10 +6,6 @@ impl<'a> Token<'a> {
     pub fn new(kind: TokenKind<'a>, begin: usize, end: usize) -> Self {
         Self(kind, TokenSpan(begin, end - 1))
     }
-
-    pub fn is_terminating(&self) -> bool {
-        self.0.is_terminating()
-    }
 }
 
 /// Stores beginning and end, inclusive
@@ -38,6 +34,7 @@ pub enum TokenKind<'a> {
     DotDot,
     Print,
     Comma,
+    QMark,
 
     // Comparison
     Equal,
@@ -77,27 +74,8 @@ pub enum TokenKind<'a> {
     Return,
     Flag,
     Methods,
+    This,
 
     // Other
-    Newline,
     EOF,
-}
-
-impl<'a> TokenKind<'a> {
-    // pub fn is_branch_node(&self) -> bool {
-    //     match self {
-    //         &TokenKind::Ident(_) => false,
-    //         &TokenKind::Str(_) => false,
-    //         &TokenKind::Number(_) => false,
-    //         _ => true,
-    //     }
-    // }
-
-    fn is_terminating(&self) -> bool {
-        match self {
-            &TokenKind::Equal => true,
-            &TokenKind::SemiColon => true,
-            _ => false,
-        }
-    }
 }

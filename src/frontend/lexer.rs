@@ -59,6 +59,7 @@ impl<'a> Lexer<'a> {
                 [b'}', ..] => self.add_token(TokenKind::RCurl, self.pos, 1),
                 [b'$', ..] => self.add_token(TokenKind::Print, self.pos, 1),
                 [b',', ..] => self.add_token(TokenKind::Comma, self.pos, 1),
+                [b'?', ..] => self.add_token(TokenKind::QMark, self.pos, 1),
                 [b'"', ..] => {
                     let begin = self.pos;
                     let literal = self.str();
@@ -178,5 +179,6 @@ fn generate_keyword_map<'a>() -> HashMap<&'a str, TokenKind<'a>> {
     map.insert("flag", TokenKind::Flag);
     map.insert("class", TokenKind::Class);
     map.insert("methods", TokenKind::Methods);
+    map.insert("this", TokenKind::This);
     map
 }
