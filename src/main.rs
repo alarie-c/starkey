@@ -3,6 +3,7 @@ use std::{env, fs};
 use frontend::parser;
 
 mod backend;
+mod errors;
 mod frontend;
 
 fn main() {
@@ -14,15 +15,17 @@ fn main() {
         let path = &args[1];
         let source = fs::read_to_string(&path).expect("Error reading source file");
 
+        // Initialize errors
+        let mut errors = errors::error::Errors::initialize();
+
         // Create lexer and tokenize
         let mut lexer = frontend::lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
 
         // Create parser and parse
-        let mut parser = frontend::parser::Parser::new(tokens.iter());
+        let mut parser = frontend::parser::Parser::new(&mut errors, tokens.iter());
         parser.parse();
         dbg!(&parser);
-
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");
         std::process::exit(1);
