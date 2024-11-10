@@ -6,6 +6,7 @@ pub enum Expr {
     Str(String),
     Ident(String),
     Parameter(Box<Expr>, Box<Expr>),
+    QMark(Box<Expr>),
     Wildcard,
 
     QualifiedIdent(Box<Expr>, Box<Expr>),
@@ -19,7 +20,7 @@ pub enum Expr {
 
     /// Ident, Fields
     ClassExpr(Box<Expr>, Box<Expr>),
-    
+
     /// Expects `Vec<Expr::Parameter>`
     ClassFields(Vec<Box<Expr>>),
 
@@ -37,7 +38,6 @@ pub enum Expr {
     FunctionCall(Box<Expr>, Box<Expr>),
     FunctionArgs(Vec<Box<Expr>>),
     ReturnExpr(Box<Expr>),
-
 
     VariableExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),
     ConstExpr(Box<Expr>, Option<Box<Expr>>, Box<Expr>),

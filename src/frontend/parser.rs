@@ -81,7 +81,8 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         if self.stack.len() == 2 {
             let fields = self.stack.pop().unwrap();
             let ident = self.stack.pop().unwrap();
-            self.tree.push(Expr::ClassExpr(Box::new(ident), Box::new(fields)));
+            self.tree
+                .push(Expr::ClassExpr(Box::new(ident), Box::new(fields)));
             Some(())
         } else {
             None
@@ -270,6 +271,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
             TokenKind::Print => self.state = State::PrintExpr,
             TokenKind::Return => self.state = State::ReturnExpr,
             TokenKind::Flag => self.state = State::FlagExpr,
+            TokenKind::QMark => self.expr_qmark(),
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),
             TokenKind::Minus => self.expr_binaryop(BinaryOperator::Minus),
@@ -309,20 +311,19 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     fn expr_class_methods(&mut self) {
         let mut len = self.tree.len();
         let mut methods = Vec::<Box<Expr>>::new();
-        let ident = self.stack.pop().unwrap_or_else(|| {
-            panic!("Missing identifier for def block!")
-        });
+        let ident = self
+            .stack
+            .pop()
+            .unwrap_or_else(|| panic!("Missing identifier for def block!"));
         while let Some(token) = self.tokens.next() {
             match token.0 {
                 TokenKind::Def => self.state = State::PreParamFunctionExpr,
                 TokenKind::Ident(i) => self.expr_ident(i),
-                TokenKind::Colon => {
-                    match self.state {
-                        State::PreParamFunctionExpr => self.expr_parameter(),
-                        State::PostParamFunctionExpr => {}
-                        _ => panic!("Unexpected `:` in state: {:?}", self.state),
-                    }
-                }
+                TokenKind::Colon => match self.state {
+                    State::PreParamFunctionExpr => self.expr_parameter(),
+                    State::PostParamFunctionExpr => {}
+                    _ => panic!("Unexpected `:` in state: {:?}", self.state),
+                },
                 TokenKind::LPar => match self.state {
                     State::PreParamFunctionExpr => self.expr_parameters(),
                     _ => panic!("Unexpected '(' in class def block"),
@@ -544,8 +545,15 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
         self.state = original_state;
         match self.state {
             State::PostParamFunctionExpr => self.try_reduce(),
-            _ => {},
+            _ => {}
         }
+    }
+
+    fn expr_qmark(&mut self) {
+        let ident = self.stack.pop().unwrap_or_else(|| {
+            panic!("Expected a valid LHS expression for QMark");
+        });
+        self.stack.push(Expr::QMark(Box::new(ident)));
     }
 
     fn expr_binaryop(&mut self, operator: BinaryOperator) {
