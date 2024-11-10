@@ -25,7 +25,7 @@ pub enum State {
     TypedConstExpr,
     MutationExpr,
     ImportExpr,
-    FlagExpr,
+    DirectiveExpr,
 }
 
 #[derive(Debug)]
@@ -73,7 +73,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
         match self.state {
             State::ClassExpr => self.reduce_class_expr(),
-            State::FlagExpr => self.reduce_flag_expr(),
+            State::DirectiveExpr => self.reduce_flag_expr(),
             State::ReturnExpr => self.reduce_return_expr(),
             State::PrintExpr => self.reduce_print_expr(),
             State::ImportExpr => self.reduce_import_expr(),
@@ -110,7 +110,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
     fn reduce_flag_expr(&mut self) -> Option<()> {
         if self.stack.len() == 1 {
             let flag = self.stack.pop().unwrap();
-            self.tree.push(Expr::FlagExpr(Box::new(flag)));
+            self.tree.push(Expr::Directive(Box::new(flag)));
             Some(())
         } else {
             None
@@ -289,7 +289,7 @@ impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
 
             TokenKind::Print => self.state = State::PrintExpr,
             TokenKind::Return => self.state = State::ReturnExpr,
-            TokenKind::Flag => self.state = State::FlagExpr,
+            TokenKind::Directive => self.state = State::DirectiveExpr,
             TokenKind::QMark => self.expr_qmark(),
 
             TokenKind::Plus => self.expr_binaryop(BinaryOperator::Plus),

@@ -72,7 +72,7 @@ pub enum TokenKind<'a> {
     Class,
     Enum,
     Return,
-    Flag,
+    Directive,
     Methods,
     This,
 

@@ -1,4 +1,1 @@
-<<<<<<< HEAD
-=======
-def hello(x = 12)
->>>>>>> b91d740f9283eac494c60fdc1f2627d6ad2b13e9
+directive IGNORE_DEAD_CODE;

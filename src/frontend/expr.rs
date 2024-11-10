@@ -30,7 +30,7 @@ pub enum Expr {
     /// from `Package` import `Vec<Symbols>`
     ImportExpr(Box<Expr>, Box<Expr>),
     ImportArgs(Vec<Box<Expr>>),
-    FlagExpr(Box<Expr>),
+    Directive(Box<Expr>),
 
     /// Ident, Params, Return, Body
     FunctionExpr(Box<Expr>, Box<Expr>, Option<Box<Expr>>, Box<Expr>),
