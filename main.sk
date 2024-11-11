@@ -1,1 +1,2 @@
-directive IGNORE_DEAD_CODE;
+x = 10
+r = def("hello") + 1;

@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{env, fmt::format, fs};
 
 use frontend::parser;
 
@@ -16,14 +16,15 @@ fn main() {
         let source = fs::read_to_string(&path).expect("Error reading source file");
 
         // Initialize errors
-        let mut errors = errors::error::Errors::initialize();
+        let mut error_handler = errors::error::Errors::initialize();
+        let formatter = errors::formatter::Formatter::initialize(&source);
 
         // Create lexer and tokenize
         let mut lexer = frontend::lexer::Lexer::new(&source);
         let tokens = lexer.tokenize();
 
         // Create parser and parse
-        let mut parser = frontend::parser::Parser::new(&mut errors, tokens.iter());
+        let mut parser = frontend::parser::Parser::new(&mut error_handler, tokens.iter());
         parser.parse();
         dbg!(&parser);
     } else if args.len() < 2 && dbga {
