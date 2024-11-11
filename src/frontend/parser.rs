@@ -33,7 +33,7 @@ pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
     errors: &'a mut Errors<'a>,
     tokens: Peekable<Iter>,
     stack: Vec<Expr>,
-    tree: Vec<Expr>,
+    pub tree: Vec<Expr>,
     state: State,
     phrase_start: usize,
     phrase_end: usize,
