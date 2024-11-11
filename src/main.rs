@@ -16,8 +16,8 @@ fn main() {
         let source = fs::read_to_string(&path).expect("Error reading source file");
 
         // Initialize errors
-        let mut error_handler = errors::error::Errors::initialize();
         let formatter = errors::formatter::Formatter::initialize(&source);
+        let mut error_handler = errors::error::Errors::initialize(&formatter);
 
         // Create lexer and tokenize
         let mut lexer = frontend::lexer::Lexer::new(&source);
@@ -26,7 +26,7 @@ fn main() {
         // Create parser and parse
         let mut parser = frontend::parser::Parser::new(&mut error_handler, tokens.iter());
         parser.parse();
-        dbg!(&parser);
+        //dbg!(&parser);
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");
         std::process::exit(1);

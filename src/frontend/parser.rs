@@ -30,7 +30,7 @@ pub enum State {
 
 #[derive(Debug)]
 pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
-    errors: &'a mut Errors,
+    errors: &'a mut Errors<'a>,
     tokens: Peekable<Iter>,
     stack: Vec<Expr>,
     tree: Vec<Expr>,
@@ -40,7 +40,7 @@ pub struct Parser<'a, Iter: Iterator<Item = &'a Token<'a>>> {
 }
 
 impl<'a, Iter: Iterator<Item = &'a Token<'a>>> Parser<'a, Iter> {
-    pub fn new(errors: &'a mut Errors, tokens: Iter) -> Self {
+    pub fn new(errors: &'a mut Errors<'a>, tokens: Iter) -> Self {
         Self {
             errors,
             tokens: tokens.peekable(),

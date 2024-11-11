@@ -1,17 +1,25 @@
 use std::ops::Range;
 
-#[derive(Debug)]
-pub struct Errors(Vec<SkError>);
+use super::formatter::Formatter;
 
-impl Errors {
-    pub fn initialize() -> Self {
-        Self(Vec::new())
+#[derive(Debug)]
+pub struct Errors<'a> {
+    errs: Vec<SkError>,
+    fmt: &'a Formatter<'a>,
+}
+
+impl<'a> Errors<'a> {
+    pub fn initialize(fmt: &'a Formatter<'a>) -> Self {
+        Self {
+            errs: Vec::new(),
+            fmt,
+        }
     }
 
     /// Creates a new error an pushes it to the Errors vec
     /// Start and end are inclusive such that the range is start..=end
     pub fn new(&mut self, class: ErrorClass, kind: ErrorKind, start: usize, end: usize) {
-        self.0.push(SkError {
+        self.errs.push(SkError {
             class,
             kind,
             span: start..end + 1,
@@ -19,7 +27,13 @@ impl Errors {
     }
 
     pub fn dbg(&self) {
-        self.0.iter().for_each(|x| println!("{:?}", x));
+        self.errs.iter().for_each(|x| println!("{:?}", x));
+    }
+
+    fn print_error(&self, err: &SkError) {
+        // Get the line this belongs to
+        let (line_str, range) = self.fmt.get_line(err.span.start);
+        let underline = Formatter::get_underline(&line_str, range);
     }
 }
 
