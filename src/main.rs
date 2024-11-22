@@ -1,10 +1,8 @@
-use std::{env, fmt::format, fs};
-
-use frontend::parser;
+use std::{env, fs};
 
 mod errors;
 mod frontend;
-mod interep;
+mod backend;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -28,11 +26,6 @@ fn main() {
         parser.parse();
 
         dbg!(&parser.tree);
-
-        let mut interep = interep::ir_gen::Interep::new(&parser.tree);
-        interep.generate();
-
-        dbg!(&interep);
 
         //dbg!(&parser);
     } else if args.len() < 2 && dbga {

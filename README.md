@@ -21,3 +21,6 @@ A data-science programming langauge made to make the manipulation and handling o
 
 # 11/5/24
 > This parser is working really well so far. There are a couple parts of the code that are super duper sketchy that I need to work out and handle a little better, but other than that, everything works as intended and is scalable/modular exactly the way I had planned.
+
+# 11/22/24
+> I think i'm going to experiment with maybe just skipping the IR. All of this stuff should be evaluated and I plan on doing multiple passes to allow the user to use values defined later in the program. On top of this, I really just don't see the merit in generating the IR when in reality the entire language is basically dynamically typed but has static rules enforced at runtime. 
