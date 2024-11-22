@@ -27,6 +27,9 @@ fn main() {
 
         dbg!(&parser.tree);
 
+        // Create runtime
+        let mut runtime = backend::eval::Runtime::initialize(parser.tree.into_iter());
+
         //dbg!(&parser);
     } else if args.len() < 2 && dbga {
         eprintln!("Please specify a file path");
